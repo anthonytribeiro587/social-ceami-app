@@ -11,7 +11,13 @@ type FamilyRow = {
   members_count: number;
   city: string;
   neighborhood: string;
-  status: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | string;
+  // no banco pode vir null em alguns casos antigos, então tratamos isso no UI
+  is_active: boolean | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  address_key: string | null;
+  cpf_clean: string | null;
   created_at: string;
 };
 
@@ -25,12 +31,24 @@ function maskCpf(cpf: string) {
   return `***.***.***-${d.slice(9, 11)}`;
 }
 
+function normalizeStatus(s: string | null | undefined) {
+  const up = String(s || "").trim().toUpperCase();
+  if (up === "APPROVED" || up === "PENDING" || up === "REJECTED") return up;
+  // se veio lixo antigo, tratamos como PENDING
+  return "PENDING";
+}
+
 export default function AdminFamiliasPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const [rows, setRows] = useState<FamilyRow[]>([]);
   const [q, setQ] = useState("");
+
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "PENDING" | "APPROVED" | "REJECTED"
+  >("ALL");
 
   // form
   const [openForm, setOpenForm] = useState(false);
@@ -48,35 +66,55 @@ export default function AdminFamiliasPage() {
     state: "RS",
   });
 
+  // mapa: address_key -> count (pra sinalizar duplicados)
+  const addressDupCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) {
+      if (r.address_key) m.set(r.address_key, (m.get(r.address_key) || 0) + 1);
+    }
+    return m;
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter((r) => {
+
+    let base = rows;
+
+    if (statusFilter !== "ALL") {
+      base = base.filter((r) => normalizeStatus(r.status) === statusFilter);
+    }
+
+    if (!s) return base;
+
+    const sDigits = onlyDigits(s);
+
+    return base.filter((r) => {
       return (
-        r.responsible_name.toLowerCase().includes(s) ||
-        onlyDigits(r.cpf).includes(onlyDigits(s)) ||
-        onlyDigits(r.phone).includes(onlyDigits(s)) ||
+        (r.responsible_name || "").toLowerCase().includes(s) ||
+        onlyDigits(r.cpf || "").includes(sDigits) ||
+        onlyDigits(r.phone || "").includes(sDigits) ||
         (r.city || "").toLowerCase().includes(s) ||
         (r.neighborhood || "").toLowerCase().includes(s)
       );
     });
-  }, [q, rows]);
+  }, [q, rows, statusFilter]);
 
   async function loadFamilies() {
     setLoading(true);
     setErrorMsg(null);
+    setInfoMsg(null);
 
     const { data: sessionRes } = await supabase.auth.getSession();
     if (!sessionRes.session) {
       setLoading(false);
-      setErrorMsg("Você não está logado. (Depois vamos criar a tela de login.)");
+      setErrorMsg("Você não está logado.");
       return;
     }
 
     const { data, error } = await supabase
       .from("families")
       .select(
-        "id,responsible_name,cpf,phone,members_count,city,neighborhood,status,created_at"
+        "id,responsible_name,cpf,phone,members_count,city,neighborhood,status,is_active,approved_at,approved_by,address_key,cpf_clean,created_at"
       )
       .order("created_at", { ascending: false });
 
@@ -96,23 +134,26 @@ export default function AdminFamiliasPage() {
 
   async function createFamily() {
     setErrorMsg(null);
+    setInfoMsg(null);
 
-    // validações simples
     const cpfDigits = onlyDigits(form.cpf);
     const phoneDigits = onlyDigits(form.phone);
 
     if (!form.responsible_name.trim()) return setErrorMsg("Informe o nome.");
-    if (cpfDigits.length !== 11) return setErrorMsg("CPF inválido (precisa ter 11 dígitos).");
-    if (phoneDigits.length < 10) return setErrorMsg("Telefone inválido (DDD + número).");
-    if (form.members_count < 1) return setErrorMsg("Quantidade de pessoas deve ser >= 1.");
-    if (!form.cep.trim() || onlyDigits(form.cep).length < 8) return setErrorMsg("CEP inválido.");
+    if (cpfDigits.length !== 11)
+      return setErrorMsg("CPF inválido (precisa ter 11 dígitos).");
+    if (phoneDigits.length < 10)
+      return setErrorMsg("Telefone inválido (DDD + número).");
+    if (form.members_count < 1)
+      return setErrorMsg("Quantidade de pessoas deve ser >= 1.");
+    if (!form.cep.trim() || onlyDigits(form.cep).length < 8)
+      return setErrorMsg("CEP inválido.");
     if (!form.street.trim()) return setErrorMsg("Rua é obrigatória.");
     if (!form.number.trim()) return setErrorMsg("Número é obrigatório.");
     if (!form.neighborhood.trim()) return setErrorMsg("Bairro é obrigatório.");
     if (!form.city.trim()) return setErrorMsg("Cidade é obrigatória.");
     if (!form.state.trim()) return setErrorMsg("UF é obrigatória.");
 
-    // insert
     const { error } = await supabase.from("families").insert({
       responsible_name: form.responsible_name.trim(),
       cpf: cpfDigits,
@@ -127,10 +168,13 @@ export default function AdminFamiliasPage() {
       city: form.city.trim(),
       state: form.state.trim().toUpperCase(),
 
-      status: "ACTIVE", // cadastro manual já aprovado
+      // REGRA: cadastro manual entra pendente e ativo
+      status: "PENDING",
+      is_active: true,
     });
 
     if (error) {
+      // aqui vai estourar se CPF já existir por causa do índice unique
       setErrorMsg(error.message);
       return;
     }
@@ -150,6 +194,57 @@ export default function AdminFamiliasPage() {
       state: "RS",
     });
 
+    setInfoMsg("Família cadastrada como PENDING (aguardando aprovação).");
+    await loadFamilies();
+  }
+
+ async function setFamilyStatus(id: string, status: "APPROVED" | "REJECTED" | "PENDING") {
+  setErrorMsg(null);
+  setInfoMsg(null);
+
+  const payload: any = { status };
+
+  // quando aprovar, registra quem e quando + ATIVA automaticamente
+  if (status === "APPROVED") {
+    const { data: u } = await supabase.auth.getUser();
+    payload.approved_at = new Date().toISOString();
+    payload.approved_by = u.user?.id ?? null;
+    payload.is_active = true; // <<< AQUI
+  }
+
+  // se voltar para PENDING/REJECTED, limpa aprovação (e mantém is_active como está)
+  if (status !== "APPROVED") {
+    payload.approved_at = null;
+    payload.approved_by = null;
+  }
+
+  const { error } = await supabase.from("families").update(payload).eq("id", id);
+
+  if (error) {
+    setErrorMsg(error.message);
+    return;
+  }
+
+  setInfoMsg(`Status atualizado para ${status}.`);
+  await loadFamilies();
+}
+
+
+  async function toggleActive(id: string, nextActive: boolean) {
+    setErrorMsg(null);
+    setInfoMsg(null);
+
+    const { error } = await supabase
+      .from("families")
+      .update({ is_active: nextActive })
+      .eq("id", id);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
+    setInfoMsg(nextActive ? "Família ativada." : "Família desativada.");
     await loadFamilies();
   }
 
@@ -157,16 +252,26 @@ export default function AdminFamiliasPage() {
     <main style={{ maxWidth: 1100 }}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Famílias</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Lista e cadastro manual de famílias (cadastro manual entra como <b>ACTIVE</b>).
+        Cadastro manual entra como <b>PENDING</b> e precisa ser <b>APPROVED</b>{" "}
+        para receber cesta.
       </p>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "16px 0" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          margin: "16px 0",
+          flexWrap: "wrap",
+        }}
+      >
         <input
           placeholder="Buscar por nome, CPF, telefone, cidade, bairro..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{
             flex: 1,
+            minWidth: 260,
             padding: 10,
             borderRadius: 8,
             border: "1px solid #333",
@@ -174,42 +279,69 @@ export default function AdminFamiliasPage() {
             color: "white",
           }}
         />
-        <button
-          onClick={() => setOpenForm((v) => !v)}
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
           style={{
-            padding: "10px 14px",
+            padding: "10px 12px",
             borderRadius: 8,
             border: "1px solid #333",
             background: "transparent",
             color: "white",
-            cursor: "pointer",
           }}
         >
+          <option value="ALL">Todos</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+        </select>
+
+        <button onClick={() => setOpenForm((v) => !v)} style={btn}>
           {openForm ? "Fechar" : "Cadastrar família"}
         </button>
-        <button
-          onClick={loadFamilies}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #333",
-            background: "transparent",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
+
+        <button onClick={loadFamilies} style={btn}>
           Atualizar
         </button>
       </div>
 
       {errorMsg && (
-        <div style={{ padding: 12, border: "1px solid #a33", borderRadius: 8, marginBottom: 12 }}>
+        <div
+          style={{
+            padding: 12,
+            border: "1px solid #a33",
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+        >
           <b>Erro:</b> {errorMsg}
         </div>
       )}
 
+      {infoMsg && (
+        <div
+          style={{
+            padding: 12,
+            border: "1px solid #2a7",
+            borderRadius: 8,
+            marginBottom: 12,
+            opacity: 0.95,
+          }}
+        >
+          {infoMsg}
+        </div>
+      )}
+
       {openForm && (
-        <div style={{ border: "1px solid #333", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            border: "1px solid #333",
+            borderRadius: 10,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
           <h2 style={{ fontSize: 18, marginTop: 0 }}>Cadastro manual</h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -342,23 +474,91 @@ export default function AdminFamiliasPage() {
                 <th style={th}>Cidade</th>
                 <th style={th}>Bairro</th>
                 <th style={th}>Status</th>
+                <th style={th}>Flags</th>
+                <th style={th}>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id} style={{ borderTop: "1px solid #333" }}>
-                  <td style={td}>{r.responsible_name}</td>
-                  <td style={td}>{maskCpf(r.cpf)}</td>
-                  <td style={td}>{r.phone}</td>
-                  <td style={td}>{r.members_count}</td>
-                  <td style={td}>{r.city}</td>
-                  <td style={td}>{r.neighborhood}</td>
-                  <td style={td}>{r.status}</td>
-                </tr>
-              ))}
+              {filtered.map((r) => {
+                const st = normalizeStatus(r.status);
+                const dup = r.address_key
+                  ? (addressDupCount.get(r.address_key) || 0) > 1
+                  : false;
+
+                // ✅ TRATAMENTO IMPORTANTE:
+                // - se is_active vier NULL do banco, consideramos ATIVO
+                // - só é INATIVA quando for explicitamente false
+                const active = r.is_active !== false;
+
+                return (
+                  <tr key={r.id} style={{ borderTop: "1px solid #333" }}>
+                    <td style={td}>{r.responsible_name}</td>
+                    <td style={td}>{maskCpf(r.cpf)}</td>
+                    <td style={td}>{r.phone}</td>
+                    <td style={td}>{r.members_count}</td>
+                    <td style={td}>{r.city}</td>
+                    <td style={td}>{r.neighborhood}</td>
+
+                    <td style={td}>
+                      {st}
+                      {r.is_active === false && (
+                        <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {dup ? (
+                        <span title="Outro cadastro com o mesmo endereço">⚠ endereço</span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          style={miniBtn}
+                          onClick={() => setFamilyStatus(r.id, "APPROVED")}
+                          disabled={st === "APPROVED"}
+                          title="Aprovar"
+                        >
+                          Aprovar
+                        </button>
+
+                        <button
+                          style={miniBtn}
+                          onClick={() => setFamilyStatus(r.id, "REJECTED")}
+                          disabled={st === "REJECTED"}
+                          title="Rejeitar"
+                        >
+                          Rejeitar
+                        </button>
+
+                        <button
+                          style={miniBtn}
+                          onClick={() => setFamilyStatus(r.id, "PENDING")}
+                          disabled={st === "PENDING"}
+                          title="Voltar para pendente"
+                        >
+                          Pendente
+                        </button>
+
+                        <button
+                          style={miniBtn}
+                          onClick={() => toggleActive(r.id, !active)}
+                          title={active ? "Desativar" : "Ativar"}
+                        >
+                          {active ? "Desativar" : "Ativar"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
               {filtered.length === 0 && (
                 <tr>
-                  <td style={td} colSpan={7}>
+                  <td style={td} colSpan={9}>
                     Nenhuma família cadastrada ainda.
                   </td>
                 </tr>
@@ -369,7 +569,8 @@ export default function AdminFamiliasPage() {
       )}
 
       <p style={{ marginTop: 14, opacity: 0.75 }}>
-        Próximo: vamos criar a tela de <b>Login</b> e proteger a rota <code>/admin</code>.
+        Regras aplicadas: <b>CPF único</b>, <b>suspeita por endereço</b>, e só{" "}
+        <b>APPROVED</b> pode receber cesta.
       </p>
     </main>
   );
@@ -396,6 +597,25 @@ const td: React.CSSProperties = {
   textAlign: "left",
   padding: 12,
   fontSize: 13,
+};
+
+const btn: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 8,
+  border: "1px solid #333",
+  background: "transparent",
+  color: "white",
+  cursor: "pointer",
+};
+
+const miniBtn: React.CSSProperties = {
+  padding: "7px 10px",
+  borderRadius: 8,
+  border: "1px solid #333",
+  background: "transparent",
+  color: "white",
+  cursor: "pointer",
+  fontSize: 12,
 };
 
 const primaryBtn: React.CSSProperties = {

@@ -111,7 +111,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <a href="/admin/familias" style={navLink}>Famílias</a>
           <a href="/admin/equipe" style={navLink}>Equipe</a>
+          <a href="/admin/entregas" style={navLink}>Entregas</a>
           <a href="/admin/estoque" style={navLink}>Estoque</a>
+
+
         </div>
 
         <button
