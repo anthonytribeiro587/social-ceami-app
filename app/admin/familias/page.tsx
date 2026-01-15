@@ -154,7 +154,7 @@ export default function AdminFamiliasPage() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1100 }}>
+    <main style={{ maxWidth: 1100 }}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Famílias</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
         Lista e cadastro manual de famílias (cadastro manual entra como <b>ACTIVE</b>).
