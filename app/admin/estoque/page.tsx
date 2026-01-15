@@ -3,22 +3,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+
+
 type Item = {
   id: string;
   name: string;
   unit: string;
+  is_active?: boolean;
 };
+
+type StockItemRel = Item | Item[] | null;
 
 type BalanceRow = {
   item_id: string;
   qty: number;
-  stock_items: Item;
+  stock_items: StockItemRel;
 };
 
 type RecipeRow = {
   item_id: string;
   qty_needed: number;
 };
+
+type MoveType = "IN" | "OUT";
+
+type MoveRow = {
+  id: string;
+  created_at: string;
+  item_id: string;
+  move_type: MoveType;
+  qty: number;
+  note: string | null;
+  stock_items: StockItemRel;
+};
+
+function oneItem(rel: StockItemRel): Item | null {
+  if (!rel) return null;
+  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
+}
+
 
 export default function AdminEstoquePage() {
   const [msg, setMsg] = useState<string | null>(null);
@@ -29,17 +52,25 @@ export default function AdminEstoquePage() {
   const [recipe, setRecipe] = useState<RecipeRow[]>([]);
   const [readyQty, setReadyQty] = useState<number>(0);
 
+  const [moves, setMoves] = useState<MoveRow[]>([]);
+
   // forms
   const [newItem, setNewItem] = useState({ name: "", unit: "un" });
-  const [move, setMove] = useState({ item_id: "", move_type: "IN", qty: 1, note: "" });
+  const [move, setMove] = useState<{ item_id: string; move_type: MoveType; qty: number; note: string }>({
+    item_id: "",
+    move_type: "IN",
+    qty: 1,
+    note: "",
+  });
 
   async function loadAll() {
     setLoading(true);
     setMsg(null);
 
+    // 1) itens
     const { data: itemsData, error: itemsErr } = await supabase
       .from("stock_items")
-      .select("id,name,unit")
+      .select("id,name,unit,is_active")
       .eq("is_active", true)
       .order("name", { ascending: true });
 
@@ -49,21 +80,60 @@ export default function AdminEstoquePage() {
       return;
     }
 
+    // 2) saldos
     const { data: balData, error: balErr } = await supabase
       .from("stock_balances")
       .select("item_id,qty,stock_items(id,name,unit)")
       .order("item_id", { ascending: true });
 
-    const { data: recipeData } = await supabase.from("basket_recipe").select("item_id,qty_needed");
+    if (balErr) {
+      setMsg(balErr.message);
+      setLoading(false);
+      return;
+    }
 
-    const { data: readyData } = await supabase.from("baskets_ready").select("qty").eq("id", 1).single();
+    // 3) receita
+    const { data: recipeData, error: recipeErr } = await supabase
+      .from("basket_recipe")
+      .select("item_id,qty_needed");
+
+    if (recipeErr) {
+      setMsg(recipeErr.message);
+      setLoading(false);
+      return;
+    }
+
+    // 4) cestas prontas
+    const { data: readyData, error: readyErr } = await supabase
+      .from("baskets_ready")
+      .select("qty")
+      .eq("id", 1)
+      .single();
+
+    if (readyErr) {
+      setMsg(readyErr.message);
+      setLoading(false);
+      return;
+    }
+
+    // 5) histórico (últimos 30)
+    const { data: movesData, error: movesErr } = await supabase
+      .from("stock_moves")
+      .select("id,created_at,item_id,move_type,qty,note,stock_items(id,name,unit)")
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (movesErr) {
+      setMsg(movesErr.message);
+      setLoading(false);
+      return;
+    }
 
     setItems((itemsData as Item[]) || []);
     setBalances((balData as any) || []);
     setRecipe((recipeData as RecipeRow[]) || []);
-    setReadyQty((readyData?.qty as number) || 0);
-
-    if (balErr) setMsg(balErr.message);
+    setReadyQty(Number(readyData?.qty || 0));
+    setMoves((movesData as any) || []);
 
     setLoading(false);
   }
@@ -85,13 +155,14 @@ export default function AdminEstoquePage() {
   }, [balances]);
 
   const basketsPossible = useMemo(() => {
-    // quantas cestas completas dá pra montar baseado no padrão
     if (recipe.length === 0) return 0;
 
     let min = Infinity;
     for (const r of recipe) {
-      const have = balanceMap.get(r.item_id) ?? 0;
       const need = Number(r.qty_needed);
+      if (need <= 0) continue;
+
+      const have = balanceMap.get(r.item_id) ?? 0;
       const possible = Math.floor(have / need);
       min = Math.min(min, possible);
     }
@@ -99,16 +170,17 @@ export default function AdminEstoquePage() {
   }, [recipe, balanceMap]);
 
   function missingForOneBasket() {
-    // retorna lista do que falta pra montar 1 cesta (se faltar)
     const missing: { name: string; need: number; have: number; unit: string }[] = [];
     for (const r of recipe) {
-      const have = balanceMap.get(r.item_id) ?? 0;
       const need = Number(r.qty_needed);
+      if (need <= 0) continue;
+
+      const have = balanceMap.get(r.item_id) ?? 0;
       if (have < need) {
-        const item = items.find((i) => i.id === r.item_id);
+        const it = items.find((i) => i.id === r.item_id);
         missing.push({
-          name: item?.name || "Item",
-          unit: item?.unit || "un",
+          name: it?.name || "Item",
+          unit: it?.unit || "un",
           need,
           have,
         });
@@ -119,8 +191,9 @@ export default function AdminEstoquePage() {
 
   async function addItem() {
     setMsg(null);
+
     const name = newItem.name.trim();
-    const unit = newItem.unit.trim() || "un";
+    const unit = (newItem.unit || "un").trim() || "un";
     if (!name) return setMsg("Informe o nome do item.");
 
     const { data, error } = await supabase
@@ -131,12 +204,13 @@ export default function AdminEstoquePage() {
 
     if (error) return setMsg(error.message);
 
-    // cria saldo zero automaticamente (se não existir)
-   await supabase.from("stock_balances").upsert({
-  item_id: data.id,
-  qty: 0,
-});
+    // garante saldo inicial
+    const { error: upErr } = await supabase.from("stock_balances").upsert({
+      item_id: data.id,
+      qty: 0,
+    });
 
+    if (upErr) return setMsg(upErr.message);
 
     setNewItem({ name: "", unit: "un" });
     await loadAll();
@@ -144,10 +218,10 @@ export default function AdminEstoquePage() {
 
   async function registerMove() {
     setMsg(null);
-    if (!move.item_id) return setMsg("Selecione um item.");
-    if (move.qty <= 0) return setMsg("Quantidade deve ser maior que 0.");
 
-    // pega saldo atual
+    if (!move.item_id) return setMsg("Selecione um item.");
+    if (!move.qty || move.qty <= 0) return setMsg("Quantidade deve ser maior que 0.");
+
     const current = balanceMap.get(move.item_id) ?? 0;
     const delta = move.move_type === "IN" ? move.qty : -move.qty;
 
@@ -155,17 +229,15 @@ export default function AdminEstoquePage() {
       return setMsg("Saída maior que o saldo disponível.");
     }
 
-    // registra movimento
     const { error: moveErr } = await supabase.from("stock_moves").insert({
       item_id: move.item_id,
       move_type: move.move_type,
       qty: move.qty,
-      note: move.note || null,
+      note: move.note.trim() ? move.note.trim() : null,
     });
 
     if (moveErr) return setMsg(moveErr.message);
 
-    // atualiza saldo (upsert)
     const { error: balErr } = await supabase
       .from("stock_balances")
       .upsert({ item_id: move.item_id, qty: current + delta });
@@ -178,12 +250,18 @@ export default function AdminEstoquePage() {
 
   async function saveRecipe(item_id: string, qty_needed: number) {
     setMsg(null);
-    if (qty_needed <= 0) return setMsg("Quantidade do padrão deve ser > 0.");
+
+    if (!qty_needed || qty_needed <= 0) {
+      return setMsg("Quantidade do padrão deve ser > 0.");
+    }
+
     const { error } = await supabase.from("basket_recipe").upsert({ item_id, qty_needed });
     if (error) return setMsg(error.message);
+
     await loadAll();
   }
 
+  // MVP simples: mantém teu comportamento atual (depois a gente pode trocar por RPC transacional)
   async function buildOneBasket() {
     setMsg(null);
 
@@ -197,13 +275,12 @@ export default function AdminEstoquePage() {
       );
     }
 
-    // baixa item a item e incrementa baskets_ready
-    // (MVP: operação simples; depois melhoramos com função SQL transacional)
     for (const r of recipe) {
-      const have = balanceMap.get(r.item_id) ?? 0;
       const need = Number(r.qty_needed);
+      if (need <= 0) continue;
 
-      // registra saída no histórico
+      const have = balanceMap.get(r.item_id) ?? 0;
+
       const { error: moveErr } = await supabase.from("stock_moves").insert({
         item_id: r.item_id,
         move_type: "OUT",
@@ -212,14 +289,12 @@ export default function AdminEstoquePage() {
       });
       if (moveErr) return setMsg(moveErr.message);
 
-      // atualiza saldo
       const { error: balErr } = await supabase
         .from("stock_balances")
         .upsert({ item_id: r.item_id, qty: have - need });
       if (balErr) return setMsg(balErr.message);
     }
 
-    // incrementa cestas prontas
     const { error: readyErr } = await supabase
       .from("baskets_ready")
       .update({ qty: readyQty + 1 })
@@ -317,7 +392,7 @@ export default function AdminEstoquePage() {
                   Tipo
                   <select
                     value={move.move_type}
-                    onChange={(e) => setMove({ ...move, move_type: e.target.value })}
+                    onChange={(e) => setMove({ ...move, move_type: e.target.value as MoveType })}
                     style={inputStyle}
                   >
                     <option value="IN">Entrada</option>
@@ -329,7 +404,7 @@ export default function AdminEstoquePage() {
                   Quantidade
                   <input
                     type="number"
-                    min={0}
+                    min={1}
                     value={move.qty}
                     onChange={(e) => setMove({ ...move, qty: Number(e.target.value) })}
                     style={inputStyle}
@@ -383,20 +458,15 @@ export default function AdminEstoquePage() {
                             defaultValue={need}
                             onBlur={(e) => {
                               const v = Number(e.target.value);
-                              if (!v) return;
+                              if (!v) return; // ignora 0/vazio
                               saveRecipe(i.id, v);
                             }}
-                            style={{
-                              ...inputStyle,
-                              maxWidth: 160,
-                            }}
+                            style={{ ...inputStyle, maxWidth: 160 }}
                             placeholder="Ex: 1"
                           />
                         </td>
                         <td style={td}>
-                          <span style={{ opacity: 0.7, fontSize: 12 }}>
-                            (salve editando e saindo do campo)
-                          </span>
+                          <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
                         </td>
                       </tr>
                     );
@@ -415,6 +485,51 @@ export default function AdminEstoquePage() {
 
             <p style={{ marginTop: 10, opacity: 0.8 }}>
               Dica: Defina o padrão da cesta preenchendo “Padrão (por cesta)”. Depois o sistema calcula quantas cestas dá pra montar.
+            </p>
+          </div>
+
+          <div style={card}>
+            <h2 style={h2}>Histórico (últimos 30 movimentos)</h2>
+
+            <div style={{ border: "1px solid #333", borderRadius: 10, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <th style={th}>Data</th>
+                    <th style={th}>Item</th>
+                    <th style={th}>Tipo</th>
+                    <th style={th}>Qtd</th>
+                    <th style={th}>Obs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moves.map((m: MoveRow) => (
+                    <tr key={m.id} style={{ borderTop: "1px solid #333" }}>
+                      <td style={td}>{new Date(m.created_at).toLocaleString()}</td>
+                      <td style={td}>
+  {oneItem(m.stock_items)?.name || "Item"}{" "}
+  <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
+</td>
+
+                      <td style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
+                      <td style={td}>{m.qty}</td>
+                      <td style={td}>{m.note || "-"}</td>
+                    </tr>
+                  ))}
+
+                  {moves.length === 0 && (
+                    <tr>
+                      <td style={td} colSpan={5}>
+                        Nenhum movimento registrado ainda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 10, opacity: 0.75 }}>
+              Mostrando os últimos 30 movimentos.
             </p>
           </div>
         </>

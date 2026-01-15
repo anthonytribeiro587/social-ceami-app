@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -13,6 +13,17 @@ function LoginInner() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // se já estiver logado, manda direto pro next
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace(next);
+        router.refresh();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +40,9 @@ function LoginInner() {
     if (error) return setMsg(`Erro no login: ${error.message}`);
     if (!data.session) return setMsg("Falha ao criar sessão.");
 
-    router.push(next);
+    // troca para replace + refresh (ajuda o middleware enxergar cookie)
+    router.replace(next);
+    router.refresh();
   }
 
   return (
