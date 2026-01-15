@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const next = searchParams.get("next") || "/admin/familias";
 
   const [email, setEmail] = useState("");
@@ -83,6 +82,20 @@ export default function LoginPage() {
         </button>
       </form>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+          <p>Carregando...</p>
+        </main>
+      }
+    >
+      <LoginInner />
+    </Suspense>
   );
 }
 
