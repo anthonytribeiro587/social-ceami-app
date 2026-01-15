@@ -84,10 +84,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  return (
+  const navLink: React.CSSProperties = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "1px solid #333",
+  color: "white",
+  textDecoration: "none",
+  fontSize: 13,
+};
+
+
+   return (
     <div style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-        <b>Área Admin</b>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 16,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <b>Área Admin</b>
+
+          <a href="/admin/familias" style={navLink}>Famílias</a>
+          <a href="/admin/equipe" style={navLink}>Equipe</a>
+          <a href="/admin/estoque" style={navLink}>Estoque</a>
+        </div>
 
         <button
           onClick={async () => {
@@ -109,5 +134,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {children}
     </div>
-  );
-}
+)};
