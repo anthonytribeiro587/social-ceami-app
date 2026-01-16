@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Select, Table, th, td } from "../_ui";
+import { Card, H2, Button, Input, Select, Table, th, td, MobileOnly, DesktopOnly } from "../_ui";
+
+
+
+
 
 type Item = {
   id: string;
@@ -287,7 +291,7 @@ export default function AdminEstoquePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100 }}>
+    <main style={{ maxWidth: 1100, margin: "0 auto" }}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Estoque</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>Controle de itens, entradas/saídas e montagem de cestas.</p>
 
@@ -392,65 +396,117 @@ export default function AdminEstoquePage() {
           </div>
 
           <Card>
-            <H2>Saldos + Padrão da Cesta</H2>
+  <H2>Saldos + Padrão da Cesta</H2>
 
-            <Table>
-              <thead>
-                <tr>
-                  <th style={th}>Item</th>
-                  <th style={th}>Saldo</th>
-                  <th style={th}>Padrão (por cesta)</th>
-                  <th style={th}>Ação</th>
-                </tr>
-              </thead>
+  {/* MOBILE: cards */}
+  <MobileOnly>
+    <div style={{ display: "grid", gap: 10 }}>
+      {items.map((i) => {
+        const bal = balanceMap.get(i.id) ?? 0;
+        const need = recipeMap.get(i.id) ?? 0;
 
-              <tbody>
-                {items.map((i) => {
-                  const bal = balanceMap.get(i.id) ?? 0;
-                  const need = recipeMap.get(i.id) ?? 0;
+        return (
+          <div
+            key={i.id}
+            style={{
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 12,
+              padding: 12,
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <div style={{ fontWeight: 800 }}>
+              {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
+            </div>
 
-                  return (
-                    <tr key={i.id}>
-                      <td style={td}>
-                        {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
-                      </td>
-                      <td style={td}>{bal}</td>
-                      <td style={td}>
-                        <Input
-                          type="number"
-                          min={0}
-                          defaultValue={need}
-                          onBlur={(e) => {
-                            const v = Number(e.target.value);
-                            if (!v) return; // ignora 0/vazio
-                            saveRecipe(i.id, v);
-                          }}
-                          style={{ maxWidth: 160 }}
-                          placeholder="Ex: 1"
-                        />
-                      </td>
-                      <td style={td}>
-                        <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
-                      </td>
-                    </tr>
-                  );
-                })}
+            <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ opacity: 0.9 }}>
+                <b>Saldo:</b> {bal}
+              </div>
+              <div style={{ opacity: 0.9 }}>
+                <b>Padrão:</b> {need || 0}
+              </div>
+            </div>
 
-                {items.length === 0 && (
-                  <tr>
-                    <td style={td} colSpan={4}>
-                      Nenhum item cadastrado ainda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </Table>
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Editar padrão</div>
+              <Input
+                type="number"
+                min={0}
+                defaultValue={need}
+                onBlur={(e) => {
+                  const v = Number(e.target.value);
+                  if (!v) return;
+                  saveRecipe(i.id, v);
+                }}
+                placeholder="Ex: 1"
+              />
+            </div>
+          </div>
+        );
+      })}
 
-            <p style={{ marginTop: 10, opacity: 0.8 }}>
-              Dica: Defina o padrão da cesta preenchendo “Padrão (por cesta)”. Depois o sistema calcula quantas cestas dá pra
-              montar.
-            </p>
-          </Card>
+      {items.length === 0 && <div style={{ opacity: 0.75 }}>Nenhum item cadastrado ainda.</div>}
+    </div>
+  </MobileOnly>
+
+  {/* DESKTOP: tabela */}
+  <DesktopOnly>
+    <Table>
+      <thead>
+        <tr>
+          <th style={th}>Item</th>
+          <th style={th}>Saldo</th>
+          <th style={th}>Padrão (por cesta)</th>
+          <th style={th}>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((i) => {
+          const bal = balanceMap.get(i.id) ?? 0;
+          const need = recipeMap.get(i.id) ?? 0;
+
+          return (
+            <tr key={i.id}>
+              <td className="ui-td" style={td}>
+
+                {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
+              </td>
+              <td className="ui-td" style={td}>
+{bal}</td>
+              <td className="ui-td" style={td}>
+
+                <Input
+                  type="number"
+                  min={0}
+                  defaultValue={need}
+                  onBlur={(e) => {
+                    const v = Number(e.target.value);
+                    if (!v) return;
+                    saveRecipe(i.id, v);
+                  }}
+                  style={{ maxWidth: 160 }}
+                  placeholder="Ex: 1"
+                />
+              </td>
+              <td className="ui-td" style={td}>
+
+                <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
+              </td>
+            </tr>
+          );
+        })}
+
+        {items.length === 0 && (
+          <tr>
+            <td className="ui-td" style={td} colSpan={4}>Nenhum item cadastrado ainda.</td>
+          </tr>
+        )}
+      </tbody>
+    </Table>
+  </DesktopOnly>
+</Card>
+
 
           <Card>
             <H2>Histórico (últimos 30 movimentos)</H2>
@@ -469,20 +525,20 @@ export default function AdminEstoquePage() {
               <tbody>
                 {moves.map((m) => (
                   <tr key={m.id}>
-                    <td style={td}>{new Date(m.created_at).toLocaleString()}</td>
-                    <td style={td}>
+                    <td className="ui-td" style={td}>{new Date(m.created_at).toLocaleString()}</td>
+                    <td className="ui-td" style={td}>
                       {oneItem(m.stock_items)?.name || "Item"}{" "}
                       <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
                     </td>
-                    <td style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
-                    <td style={td}>{m.qty}</td>
-                    <td style={td}>{m.note || "-"}</td>
+                    <td className="ui-td" style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
+                    <td className="ui-td" style={td}>{m.qty}</td>
+                    <td className="ui-td" style={td}>{m.note || "-"}</td>
                   </tr>
                 ))}
 
                 {moves.length === 0 && (
                   <tr>
-                    <td style={td} colSpan={5}>
+                    <td className="ui-td" style={td} colSpan={5}>
                       Nenhum movimento registrado ainda.
                     </td>
                   </tr>

@@ -128,9 +128,9 @@ export default function AdminEquipePage() {
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id} style={{ borderTop: "1px solid #333" }}>
-                  <td style={td}>{p.full_name || "(sem nome)"}</td>
-                  <td style={td}>{p.role}</td>
-                  <td style={td}>{p.is_active ? "Sim" : "Não"}</td>
+                  <td className="ui-td" style={td}>{p.full_name || "(sem nome)"}</td>
+                  <td className="ui-td" style={td}>{p.role}</td>
+                  <td className="ui-td" style={td}>{p.is_active ? "Sim" : "Não"}</td>
                   <td style={{ ...td, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button onClick={() => toggleActive(p)} style={smallBtn}>
                       {p.is_active ? "Desativar" : "Ativar"}
@@ -150,7 +150,7 @@ export default function AdminEquipePage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td style={td} colSpan={4}>
+                  <td className="ui-td" style={td} colSpan={4}>
                     Nenhum usuário encontrado.
                   </td>
                 </tr>

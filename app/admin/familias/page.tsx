@@ -492,21 +492,21 @@ export default function AdminFamiliasPage() {
 
                 return (
                   <tr key={r.id} style={{ borderTop: "1px solid #333" }}>
-                    <td style={td}>{r.responsible_name}</td>
-                    <td style={td}>{maskCpf(r.cpf)}</td>
-                    <td style={td}>{r.phone}</td>
-                    <td style={td}>{r.members_count}</td>
-                    <td style={td}>{r.city}</td>
-                    <td style={td}>{r.neighborhood}</td>
+                    <td className="ui-td" style={td}>{r.responsible_name}</td>
+                    <td className="ui-td" style={td}>{maskCpf(r.cpf)}</td>
+                    <td className="ui-td" style={td}>{r.phone}</td>
+                    <td className="ui-td" style={td}>{r.members_count}</td>
+                    <td className="ui-td" style={td}>{r.city}</td>
+                    <td className="ui-td" style={td}>{r.neighborhood}</td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       {st}
                       {r.is_active === false && (
                         <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>
                       )}
                     </td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       {dup ? (
                         <span title="Outro cadastro com o mesmo endereço">⚠ endereço</span>
                       ) : (
@@ -514,7 +514,7 @@ export default function AdminFamiliasPage() {
                       )}
                     </td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <button
                           style={miniBtn}
@@ -558,7 +558,7 @@ export default function AdminFamiliasPage() {
 
               {filtered.length === 0 && (
                 <tr>
-                  <td style={td} colSpan={9}>
+                  <td className="ui-td" style={td} colSpan={9}>
                     Nenhuma família cadastrada ainda.
                   </td>
                 </tr>

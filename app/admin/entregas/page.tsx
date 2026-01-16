@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
+import { Card, H2, Button, Input, Table, th, td } from "../_ui";
 
 
 type DeliveryRow = {
@@ -26,15 +26,7 @@ export default function AdminEntregasPage() {
   const [labelData, setLabelData] = useState<any | null>(null);
 
   function getFamilyName(f: any) {
-    return (
-      f.full_name ||
-      f.name ||
-      f.responsible_name ||
-      f.head_name ||
-      f.nome ||
-      f.responsavel ||
-      "Família"
-    );
+    return f.full_name || f.name || f.responsible_name || f.head_name || f.nome || f.responsavel || "Família";
   }
 
   function getFamilyMembers(f: any) {
@@ -42,7 +34,6 @@ export default function AdminEntregasPage() {
   }
 
   function getFamilyAddress(f: any) {
-    // como sua tabela tem street/city/neighborhood etc, montamos algo melhor:
     const parts: string[] = [];
     if (f.street) parts.push(String(f.street));
     if (f.number) parts.push(String(f.number));
@@ -51,14 +42,7 @@ export default function AdminEntregasPage() {
     if (f.state) parts.push(String(f.state));
     if (f.cep) parts.push(`CEP ${String(f.cep)}`);
     const composed = parts.join(" - ");
-    return (
-      composed ||
-      f.address ||
-      f.full_address ||
-      f.endereco ||
-      f.address_text ||
-      null
-    );
+    return composed || f.address || f.full_address || f.endereco || f.address_text || null;
   }
 
   function monthStartISO() {
@@ -72,7 +56,6 @@ export default function AdminEntregasPage() {
   }
 
   function isActive(f: any) {
-    // se não existir a coluna, assume true
     return f.is_active !== false;
   }
 
@@ -80,7 +63,6 @@ export default function AdminEntregasPage() {
     setLoading(true);
     setMsg(null);
 
-    // cestas prontas
     const { data: readyData, error: readyErr } = await supabase
       .from("baskets_ready")
       .select("qty")
@@ -94,7 +76,6 @@ export default function AdminEntregasPage() {
     }
     setReadyQty(Number(readyData?.qty || 0));
 
-    // famílias
     const { data: famData, error: famErr } = await supabase
       .from("families")
       .select("id,responsible_name,cpf,members_count,street,number,neighborhood,city,state,cep,status,is_active,created_at")
@@ -107,7 +88,6 @@ export default function AdminEntregasPage() {
     }
     setFamilies(famData || []);
 
-    // entregas do mês (IMPORTANTE: considerar reversed_at)
     const { data: delData, error: delErr } = await supabase
       .from("basket_deliveries")
       .select("id,family_id,delivered_at,note,reversed_at,reversed_note")
@@ -124,7 +104,7 @@ export default function AdminEntregasPage() {
     const m = new Map<string, DeliveryRow>();
     (delData || []).forEach((d: any) => {
       const row: DeliveryRow = d;
-      if (row.reversed_at) return; // ignora estornadas para "recebeu no mês?"
+      if (row.reversed_at) return;
       if (!m.has(row.family_id)) m.set(row.family_id, row);
     });
     setDeliveriesThisMonth(m);
@@ -228,32 +208,38 @@ export default function AdminEntregasPage() {
       </p>
 
       {msg && (
-        <div style={{ padding: 12, border: "1px solid #a33", borderRadius: 8, marginBottom: 12 }}>
+        <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
           {msg}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-        <div style={pill}>
-          <b>Cestas prontas:</b> {readyQty}
+      <Card>
+        <H2>Resumo</H2>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={pill}>
+            <b>Cestas prontas:</b> {readyQty}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <Input
+              placeholder="Buscar família (nome, endereço, cpf)..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+
+          <Button onClick={loadAll}>Atualizar</Button>
         </div>
-
-        <input
-          placeholder="Buscar família (nome, endereço, cpf)..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          style={{ ...inputStyle, flex: 1, minWidth: 260 }}
-        />
-
-        <button onClick={loadAll} style={btn}>Atualizar</button>
-      </div>
+      </Card>
 
       {labelData && (
-        <div style={card}>
-          <h2 style={{ fontSize: 18, marginTop: 0 }}>Etiqueta da sacola</h2>
+        <Card>
+          <H2>Etiqueta da sacola</H2>
 
           <div id="label-print" style={labelBox}>
             <div style={{ fontWeight: 800, fontSize: 16 }}>Projeto Social da Igreja</div>
+
             <div style={{ marginTop: 8 }}>
               <b>Família:</b> {getFamilyName(labelData.family)}
             </div>
@@ -271,8 +257,7 @@ export default function AdminEntregasPage() {
             )}
 
             <div style={{ marginTop: 8 }}>
-              <b>Data:</b>{" "}
-              {new Date(labelData.delivery.delivered_at_out || labelData.createdAt).toLocaleString()}
+              <b>Data:</b> {new Date(labelData.delivery.delivered_at_out || labelData.createdAt).toLocaleString()}
             </div>
 
             <div style={{ marginTop: 8, fontWeight: 700 }}>ENTREGA AUTORIZADA</div>
@@ -285,8 +270,10 @@ export default function AdminEntregasPage() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-            <button onClick={printLabel} style={primaryBtn}>Imprimir etiqueta</button>
-            <button onClick={() => setLabelData(null)} style={btn}>Fechar</button>
+            <Button variant="primary" onClick={printLabel}>
+              Imprimir etiqueta
+            </Button>
+            <Button onClick={() => setLabelData(null)}>Fechar</Button>
           </div>
 
           <style jsx global>{`
@@ -294,7 +281,8 @@ export default function AdminEntregasPage() {
               body * {
                 visibility: hidden;
               }
-              #label-print, #label-print * {
+              #label-print,
+              #label-print * {
                 visibility: visible;
               }
               #label-print {
@@ -305,16 +293,18 @@ export default function AdminEntregasPage() {
               }
             }
           `}</style>
-        </div>
+        </Card>
       )}
 
       {loading ? (
         <p>Carregando...</p>
       ) : (
-        <div style={{ border: "1px solid #333", borderRadius: 10, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <Card>
+          <H2>Famílias</H2>
+
+          <Table>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.06)" }}>
+              <tr>
                 <th style={th}>Família</th>
                 <th style={th}>Endereço</th>
                 <th style={th}>Status</th>
@@ -322,6 +312,7 @@ export default function AdminEntregasPage() {
                 <th style={th}>Ações</th>
               </tr>
             </thead>
+
             <tbody>
               {filtered.map((f) => {
                 const already = deliveriesThisMonth.has(f.id);
@@ -329,66 +320,61 @@ export default function AdminEntregasPage() {
                 const gate = canDeliver(f);
 
                 return (
-                  <tr key={f.id} style={{ borderTop: "1px solid #333" }}>
-                    <td style={td}>
+                  <tr key={f.id}>
+                    <td className="ui-td" style={td}>
                       <div style={{ fontWeight: 700 }}>{getFamilyName(f)}</div>
-                      <div style={{ opacity: 0.75, fontSize: 12 }}>
-                        {f.cpf ? `CPF: ${f.cpf}` : ""}
-                      </div>
+                      <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${f.cpf}` : ""}</div>
                     </td>
 
-                    <td style={td}>
-                      {getFamilyAddress(f) ? String(getFamilyAddress(f)) : <span style={{ opacity: 0.6 }}>(sem endereço)</span>}
+                    <td className="ui-td" style={td}>
+                      {getFamilyAddress(f) ? (
+                        String(getFamilyAddress(f))
+                      ) : (
+                        <span style={{ opacity: 0.6 }}>(sem endereço)</span>
+                      )}
                     </td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       <div>
                         <b>{String(f.status || "PENDING").toUpperCase()}</b>
                         {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
                       </div>
+
                       {!gate.ok && (
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-                          {gate.reason}
-                        </div>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{gate.reason}</div>
                       )}
                     </td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       {already ? (
-                        <span>
-                          Sim — {new Date(last!.delivered_at).toLocaleDateString()}
-                        </span>
+                        <span>Sim — {new Date(last!.delivered_at).toLocaleDateString()}</span>
                       ) : (
                         "Não"
                       )}
                     </td>
 
-                    <td style={td}>
+                    <td className="ui-td" style={td}>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <button
-                          onClick={() => deliverToFamily(f)}
-                          disabled={!gate.ok}
-                          style={{
-                            ...smallBtn,
-                            opacity: !gate.ok ? 0.5 : 1,
-                            cursor: !gate.ok ? "not-allowed" : "pointer",
-                          }}
-                        >
-                          Entregar 1 cesta
-                        </button>
+                       <Button
+  variant="primary"
+  onClick={() => deliverToFamily(f)}
+  disabled={!gate.ok}
+  title={!gate.ok ? gate.reason : undefined}
+>
+  Entregar 1 cesta
+</Button>
 
-                        <button
-                          onClick={() => reverseForFamily(f.id)}
-                          disabled={!already}
-                          style={{
-                            ...smallBtn,
-                            opacity: !already ? 0.5 : 1,
-                            cursor: !already ? "not-allowed" : "pointer",
-                          }}
-                          title="Estorna a entrega do mês (devolve 1 cesta ao saldo)."
-                        >
-                          Estornar
-                        </button>
+
+
+                        <Button
+  onClick={() => reverseForFamily(f.id)}
+  disabled={!already}
+  title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
+>
+  Estornar
+</Button>
+
+
                       </div>
                     </td>
                   </tr>
@@ -397,82 +383,29 @@ export default function AdminEntregasPage() {
 
               {filtered.length === 0 && (
                 <tr>
-                  <td style={td} colSpan={5}>Nenhuma família encontrada.</td>
+                  <td className="ui-td" style={td} colSpan={5}>
+                    Nenhuma família encontrada.
+                  </td>
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </Card>
       )}
     </main>
   );
 }
 
-const card: React.CSSProperties = {
-  border: "1px solid #333",
-  borderRadius: 10,
-  padding: 16,
-  marginBottom: 14,
+const pill: React.CSSProperties = {
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 999,
+  padding: "8px 12px",
+  background: "rgba(255,255,255,0.02)",
 };
 
 const labelBox: React.CSSProperties = {
-  border: "2px dashed #999",
-  borderRadius: 10,
+  border: "2px dashed rgba(255,255,255,0.4)",
+  borderRadius: 12,
   padding: 14,
   maxWidth: 420,
-};
-
-const pill: React.CSSProperties = {
-  border: "1px solid #333",
-  borderRadius: 999,
-  padding: "8px 12px",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: 10,
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-};
-
-const btn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-  cursor: "pointer",
-};
-
-const primaryBtn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "white",
-  color: "black",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const smallBtn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-  fontSize: 13,
-};
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontWeight: 600,
-  fontSize: 13,
-};
-
-const td: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontSize: 13,
 };

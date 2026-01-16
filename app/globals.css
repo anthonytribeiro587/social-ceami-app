@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root{
+  --bg: #0b1220;
+  --panel: rgba(255,255,255,0.06);
+  --panel2: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.14);
+  --border2: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.72);
+  --shadow: 0 18px 60px rgba(0,0,0,0.45);
+  --radius: 16px;
+  --radius2: 20px;
+  --blur: 14px;
 }
 
 @theme inline {
@@ -12,15 +21,29 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-color-scheme: light) {
+  :root{
+    --bg: #f6f7fb;
+    --panel: rgba(20, 30, 60, 0.06);
+    --panel2: rgba(20, 30, 60, 0.03);
+    --border: rgba(20, 30, 60, 0.16);
+    --border2: rgba(20, 30, 60, 0.10);
+    --text: rgba(10, 14, 24, 0.92);
+    --muted: rgba(10, 14, 24, 0.68);
+    --shadow: 0 18px 60px rgba(0,0,0,0.10);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: radial-gradient(1200px 800px at 30% 10%, rgba(56, 92, 255, 0.22), transparent 60%),
+              radial-gradient(900px 600px at 70% 0%, rgba(0, 200, 180, 0.12), transparent 55%),
+              var(--bg);
+  color: var(--text);
 }
+
+* { box-sizing: border-box; }
+
+a { color: inherit; }
