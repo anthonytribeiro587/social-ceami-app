@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
-
+import { Card, H2, Button, Input, Select, Table, th, td } from "../_ui";
 
 type Item = {
   id: string;
@@ -37,11 +36,10 @@ type MoveRow = {
   stock_items: StockItemRel;
 };
 
-function oneItem(rel: StockItemRel): Item | null {
+function oneItem<T>(rel: T | T[] | null | undefined): T | null {
   if (!rel) return null;
-  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
+  return Array.isArray(rel) ? rel[0] ?? null : rel;
 }
-
 
 export default function AdminEstoquePage() {
   const [msg, setMsg] = useState<string | null>(null);
@@ -93,9 +91,7 @@ export default function AdminEstoquePage() {
     }
 
     // 3) receita
-    const { data: recipeData, error: recipeErr } = await supabase
-      .from("basket_recipe")
-      .select("item_id,qty_needed");
+    const { data: recipeData, error: recipeErr } = await supabase.from("basket_recipe").select("item_id,qty_needed");
 
     if (recipeErr) {
       setMsg(recipeErr.message);
@@ -104,11 +100,7 @@ export default function AdminEstoquePage() {
     }
 
     // 4) cestas prontas
-    const { data: readyData, error: readyErr } = await supabase
-      .from("baskets_ready")
-      .select("qty")
-      .eq("id", 1)
-      .single();
+    const { data: readyData, error: readyErr } = await supabase.from("baskets_ready").select("qty").eq("id", 1).single();
 
     if (readyErr) {
       setMsg(readyErr.message);
@@ -130,10 +122,10 @@ export default function AdminEstoquePage() {
     }
 
     setItems((itemsData as Item[]) || []);
-    setBalances((balData as any) || []);
+    setBalances((balData as BalanceRow[]) || []);
     setRecipe((recipeData as RecipeRow[]) || []);
     setReadyQty(Number(readyData?.qty || 0));
-    setMoves((movesData as any) || []);
+    setMoves((movesData as MoveRow[]) || []);
 
     setLoading(false);
   }
@@ -204,7 +196,6 @@ export default function AdminEstoquePage() {
 
     if (error) return setMsg(error.message);
 
-    // garante saldo inicial
     const { error: upErr } = await supabase.from("stock_balances").upsert({
       item_id: data.id,
       qty: 0,
@@ -238,9 +229,7 @@ export default function AdminEstoquePage() {
 
     if (moveErr) return setMsg(moveErr.message);
 
-    const { error: balErr } = await supabase
-      .from("stock_balances")
-      .upsert({ item_id: move.item_id, qty: current + delta });
+    const { error: balErr } = await supabase.from("stock_balances").upsert({ item_id: move.item_id, qty: current + delta });
 
     if (balErr) return setMsg(balErr.message);
 
@@ -261,7 +250,6 @@ export default function AdminEstoquePage() {
     await loadAll();
   }
 
-  // MVP simples: mantém teu comportamento atual (depois a gente pode trocar por RPC transacional)
   async function buildOneBasket() {
     setMsg(null);
 
@@ -270,8 +258,7 @@ export default function AdminEstoquePage() {
     const missing = missingForOneBasket();
     if (missing.length > 0) {
       return setMsg(
-        "Faltando para 1 cesta: " +
-          missing.map((m) => `${m.name} (${m.have}/${m.need} ${m.unit})`).join(", ")
+        "Faltando para 1 cesta: " + missing.map((m) => `${m.name} (${m.have}/${m.need} ${m.unit})`).join(", ")
       );
     }
 
@@ -289,17 +276,11 @@ export default function AdminEstoquePage() {
       });
       if (moveErr) return setMsg(moveErr.message);
 
-      const { error: balErr } = await supabase
-        .from("stock_balances")
-        .upsert({ item_id: r.item_id, qty: have - need });
+      const { error: balErr } = await supabase.from("stock_balances").upsert({ item_id: r.item_id, qty: have - need });
       if (balErr) return setMsg(balErr.message);
     }
 
-    const { error: readyErr } = await supabase
-      .from("baskets_ready")
-      .update({ qty: readyQty + 1 })
-      .eq("id", 1);
-
+    const { error: readyErr } = await supabase.from("baskets_ready").update({ qty: readyQty + 1 }).eq("id", 1);
     if (readyErr) return setMsg(readyErr.message);
 
     await loadAll();
@@ -308,12 +289,10 @@ export default function AdminEstoquePage() {
   return (
     <main style={{ maxWidth: 1100 }}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Estoque</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Controle de itens, entradas/saídas e montagem de cestas.
-      </p>
+      <p style={{ marginTop: 0, opacity: 0.8 }}>Controle de itens, entradas/saídas e montagem de cestas.</p>
 
       {msg && (
-        <div style={{ padding: 12, border: "1px solid #a33", borderRadius: 8, marginBottom: 12 }}>
+        <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
           {msg}
         </div>
       )}
@@ -322,9 +301,10 @@ export default function AdminEstoquePage() {
         <p>Carregando...</p>
       ) : (
         <>
-          <div style={card}>
-            <h2 style={h2}>Resumo</h2>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <Card>
+            <H2>Resumo</H2>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <div style={pill}>
                 <b>Cestas prontas:</b> {readyQty}
               </div>
@@ -333,267 +313,194 @@ export default function AdminEstoquePage() {
               </div>
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button onClick={buildOneBasket} style={primaryBtn}>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Button variant="primary" onClick={buildOneBasket}>
                 Montar 1 cesta
-              </button>
-              <button onClick={loadAll} style={btn}>
-                Atualizar
-              </button>
+              </Button>
+              <Button onClick={loadAll}>Atualizar</Button>
             </div>
-          </div>
+          </Card>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div style={card}>
-              <h2 style={h2}>Cadastrar item</h2>
+            <Card>
+              <H2>Cadastrar item</H2>
+
               <div style={{ display: "grid", gap: 10 }}>
                 <label>
                   Nome
-                  <input
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <Input value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
                 </label>
+
                 <label>
                   Unidade (un/kg/lt)
-                  <input
-                    value={newItem.unit}
-                    onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <Input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} />
                 </label>
-                <button onClick={addItem} style={primaryBtn}>
-                  Adicionar
-                </button>
-              </div>
-            </div>
 
-            <div style={card}>
-              <h2 style={h2}>Entrada / Saída</h2>
+                <Button variant="primary" onClick={addItem}>
+                  Adicionar
+                </Button>
+              </div>
+            </Card>
+
+            <Card>
+              <H2>Entrada / Saída</H2>
+
               <div style={{ display: "grid", gap: 10 }}>
                 <label>
                   Item
-                  <select
-                    value={move.item_id}
-                    onChange={(e) => setMove({ ...move, item_id: e.target.value })}
-                    style={inputStyle}
-                  >
+                  <Select value={move.item_id} onChange={(e) => setMove({ ...move, item_id: e.target.value })}>
                     <option value="">Selecione...</option>
                     {items.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.name} ({i.unit})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
 
                 <label>
                   Tipo
-                  <select
+                  <Select
                     value={move.move_type}
                     onChange={(e) => setMove({ ...move, move_type: e.target.value as MoveType })}
-                    style={inputStyle}
                   >
                     <option value="IN">Entrada</option>
                     <option value="OUT">Saída</option>
-                  </select>
+                  </Select>
                 </label>
 
                 <label>
                   Quantidade
-                  <input
+                  <Input
                     type="number"
                     min={1}
                     value={move.qty}
                     onChange={(e) => setMove({ ...move, qty: Number(e.target.value) })}
-                    style={inputStyle}
                   />
                 </label>
 
                 <label>
                   Observação (opcional)
-                  <input
-                    value={move.note}
-                    onChange={(e) => setMove({ ...move, note: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <Input value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} />
                 </label>
 
-                <button onClick={registerMove} style={primaryBtn}>
+                <Button variant="primary" onClick={registerMove}>
                   Registrar
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           </div>
 
-          <div style={card}>
-            <h2 style={h2}>Saldos + Padrão da Cesta</h2>
+          <Card>
+            <H2>Saldos + Padrão da Cesta</H2>
 
-            <div style={{ border: "1px solid #333", borderRadius: 10, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <th style={th}>Item</th>
-                    <th style={th}>Saldo</th>
-                    <th style={th}>Padrão (por cesta)</th>
-                    <th style={th}>Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((i) => {
-                    const bal = balanceMap.get(i.id) ?? 0;
-                    const need = recipeMap.get(i.id) ?? 0;
+            <Table>
+              <thead>
+                <tr>
+                  <th style={th}>Item</th>
+                  <th style={th}>Saldo</th>
+                  <th style={th}>Padrão (por cesta)</th>
+                  <th style={th}>Ação</th>
+                </tr>
+              </thead>
 
-                    return (
-                      <tr key={i.id} style={{ borderTop: "1px solid #333" }}>
-                        <td style={td}>
-                          {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
-                        </td>
-                        <td style={td}>{bal}</td>
-                        <td style={td}>
-                          <input
-                            type="number"
-                            min={0}
-                            defaultValue={need}
-                            onBlur={(e) => {
-                              const v = Number(e.target.value);
-                              if (!v) return; // ignora 0/vazio
-                              saveRecipe(i.id, v);
-                            }}
-                            style={{ ...inputStyle, maxWidth: 160 }}
-                            placeholder="Ex: 1"
-                          />
-                        </td>
-                        <td style={td}>
-                          <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+              <tbody>
+                {items.map((i) => {
+                  const bal = balanceMap.get(i.id) ?? 0;
+                  const need = recipeMap.get(i.id) ?? 0;
 
-                  {items.length === 0 && (
-                    <tr>
-                      <td style={td} colSpan={4}>
-                        Nenhum item cadastrado ainda.
+                  return (
+                    <tr key={i.id}>
+                      <td style={td}>
+                        {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
+                      </td>
+                      <td style={td}>{bal}</td>
+                      <td style={td}>
+                        <Input
+                          type="number"
+                          min={0}
+                          defaultValue={need}
+                          onBlur={(e) => {
+                            const v = Number(e.target.value);
+                            if (!v) return; // ignora 0/vazio
+                            saveRecipe(i.id, v);
+                          }}
+                          style={{ maxWidth: 160 }}
+                          placeholder="Ex: 1"
+                        />
+                      </td>
+                      <td style={td}>
+                        <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+
+                {items.length === 0 && (
+                  <tr>
+                    <td style={td} colSpan={4}>
+                      Nenhum item cadastrado ainda.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
 
             <p style={{ marginTop: 10, opacity: 0.8 }}>
-              Dica: Defina o padrão da cesta preenchendo “Padrão (por cesta)”. Depois o sistema calcula quantas cestas dá pra montar.
+              Dica: Defina o padrão da cesta preenchendo “Padrão (por cesta)”. Depois o sistema calcula quantas cestas dá pra
+              montar.
             </p>
-          </div>
+          </Card>
 
-          <div style={card}>
-            <h2 style={h2}>Histórico (últimos 30 movimentos)</h2>
+          <Card>
+            <H2>Histórico (últimos 30 movimentos)</H2>
 
-            <div style={{ border: "1px solid #333", borderRadius: 10, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <th style={th}>Data</th>
-                    <th style={th}>Item</th>
-                    <th style={th}>Tipo</th>
-                    <th style={th}>Qtd</th>
-                    <th style={th}>Obs</th>
+            <Table>
+              <thead>
+                <tr>
+                  <th style={th}>Data</th>
+                  <th style={th}>Item</th>
+                  <th style={th}>Tipo</th>
+                  <th style={th}>Qtd</th>
+                  <th style={th}>Obs</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {moves.map((m) => (
+                  <tr key={m.id}>
+                    <td style={td}>{new Date(m.created_at).toLocaleString()}</td>
+                    <td style={td}>
+                      {oneItem(m.stock_items)?.name || "Item"}{" "}
+                      <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
+                    </td>
+                    <td style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
+                    <td style={td}>{m.qty}</td>
+                    <td style={td}>{m.note || "-"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {moves.map((m: MoveRow) => (
-                    <tr key={m.id} style={{ borderTop: "1px solid #333" }}>
-                      <td style={td}>{new Date(m.created_at).toLocaleString()}</td>
-                      <td style={td}>
-  {oneItem(m.stock_items)?.name || "Item"}{" "}
-  <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
-</td>
+                ))}
 
-                      <td style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
-                      <td style={td}>{m.qty}</td>
-                      <td style={td}>{m.note || "-"}</td>
-                    </tr>
-                  ))}
+                {moves.length === 0 && (
+                  <tr>
+                    <td style={td} colSpan={5}>
+                      Nenhum movimento registrado ainda.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
 
-                  {moves.length === 0 && (
-                    <tr>
-                      <td style={td} colSpan={5}>
-                        Nenhum movimento registrado ainda.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <p style={{ marginTop: 10, opacity: 0.75 }}>
-              Mostrando os últimos 30 movimentos.
-            </p>
-          </div>
+            <p style={{ marginTop: 10, opacity: 0.75 }}>Mostrando os últimos 30 movimentos.</p>
+          </Card>
         </>
       )}
     </main>
   );
 }
 
-const card: React.CSSProperties = {
-  border: "1px solid #333",
-  borderRadius: 10,
-  padding: 16,
-  marginBottom: 14,
-};
-
-const h2: React.CSSProperties = {
-  fontSize: 18,
-  marginTop: 0,
-};
-
 const pill: React.CSSProperties = {
-  border: "1px solid #333",
+  border: "1px solid rgba(255,255,255,0.15)",
   borderRadius: 999,
   padding: "8px 12px",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  marginTop: 6,
-  padding: 10,
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-};
-
-const btn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-  cursor: "pointer",
-};
-
-const primaryBtn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "white",
-  color: "black",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontWeight: 600,
-  fontSize: 13,
-};
-
-const td: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontSize: 13,
+  background: "rgba(255,255,255,0.02)",
 };

@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+
+type Profile = {
+  role: "ADMIN" | "STAFF" | string;
+  is_active: boolean;
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,130 +16,263 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [checking, setChecking] = useState(true);
   const [denied, setDenied] = useState<string | null>(null);
 
+  // evita loop visual: enquanto checa, não renderiza as páginas
   useEffect(() => {
+    let mounted = true;
+
     (async () => {
-      setDenied(null);
+      try {
+        setDenied(null);
+        setChecking(true);
 
-      const { data: sessionRes } = await supabase.auth.getSession();
-      const session = sessionRes.session;
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const session = sessionRes.session;
 
-      if (!session) {
-        // IMPORTANT: use replace to avoid navigation loops/history weirdness
-        router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-        return;
-      }
+        if (!session) {
+          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          return;
+        }
 
-      // Fetch role from profiles
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role,is_active")
-        .eq("id", session.user.id)
-        .single();
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role,is_active")
+          .eq("id", session.user.id)
+          .single<Profile>();
 
-      if (error || !profile) {
-        setDenied("Sem perfil válido. Fale com o administrador.");
+        if (!mounted) return;
+
+        if (error || !profile) {
+          setDenied("Sem perfil válido. Fale com o administrador.");
+          setChecking(false);
+          return;
+        }
+
+        if (!profile.is_active) {
+          setDenied("Seu usuário está desativado.");
+          setChecking(false);
+          return;
+        }
+
+        if (profile.role !== "ADMIN" && profile.role !== "STAFF") {
+          setDenied("Acesso negado. Área restrita à equipe.");
+          setChecking(false);
+          return;
+        }
+
         setChecking(false);
-        return;
-      }
-
-      if (!profile.is_active) {
-        setDenied("Seu usuário está desativado.");
+      } catch (e) {
+        if (!mounted) return;
+        setDenied("Falha ao verificar permissão. Tente novamente.");
         setChecking(false);
-        return;
       }
-
-      if (profile.role !== "ADMIN" && profile.role !== "STAFF") {
-        setDenied("Acesso negado. Área restrita à equipe.");
-        setChecking(false);
-        return;
-      }
-
-      setChecking(false);
     })();
+
+    return () => {
+      mounted = false;
+    };
   }, [pathname, router]);
+
+  const navItems = useMemo(
+    () => [
+      { label: "Famílias", href: "/admin/familias" },
+      { label: "Equipe", href: "/admin/equipe" },
+      { label: "Entregas", href: "/admin/entregas" },
+      { label: "Estoque", href: "/admin/estoque" },
+    ],
+    []
+  );
 
   if (checking) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-        <p>Verificando acesso...</p>
-      </main>
+      <div style={page}>
+        <div style={container}>
+          <div style={card}>
+            <h1 style={{ ...h1, marginBottom: 6 }}>Verificando acesso…</h1>
+            <p style={muted}>Só um instante.</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (denied) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-        <h1 style={{ fontSize: 20 }}>Acesso negado</h1>
-        <p>{denied}</p>
-        <button
-          onClick={() => router.push("/login")}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #333",
-            background: "white",
-            color: "black",
-            cursor: "pointer",
-            fontWeight: 700,
-          }}
-        >
-          Ir para login
-        </button>
-      </main>
+      <div style={page}>
+        <div style={container}>
+          <div style={card}>
+            <h1 style={{ ...h1, marginBottom: 6 }}>Acesso negado</h1>
+            <p style={{ ...muted, marginBottom: 14 }}>{denied}</p>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={() => router.push("/login")}
+                style={primaryBtn}
+                type="button"
+              >
+                Ir para login
+              </button>
+
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }}
+                style={btn}
+                type="button"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  const navLink: React.CSSProperties = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid #333",
+  return (
+    <div style={page}>
+      <div style={topbarWrap}>
+        <div style={topbar}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={brand}>Área Admin</div>
+
+            <div style={nav}>
+              {navItems.map((it) => {
+                const active = pathname === it.href || pathname?.startsWith(it.href + "/");
+                return (
+                  <button
+                    key={it.href}
+                    type="button"
+                    onClick={() => router.push(it.href)}
+                    style={{
+                      ...navBtn,
+                      ...(active ? navBtnActive : null),
+                    }}
+                  >
+                    {it.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/login");
+            }}
+            style={btn}
+            type="button"
+          >
+            Sair
+          </button>
+        </div>
+      </div>
+
+      <div style={container}>{children}</div>
+    </div>
+  );
+}
+
+/* ===== styles ===== */
+
+const page: React.CSSProperties = {
+  minHeight: "100vh",
+  background: "#0b0b0b",
   color: "white",
-  textDecoration: "none",
+  fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+};
+
+const container: React.CSSProperties = {
+  maxWidth: 1100,
+  margin: "0 auto",
+  padding: 24,
+};
+
+const topbarWrap: React.CSSProperties = {
+  position: "sticky",
+  top: 0,
+  zIndex: 50,
+  background: "rgba(11,11,11,0.85)",
+  backdropFilter: "blur(10px)",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
+};
+
+const topbar: React.CSSProperties = {
+  maxWidth: 1100,
+  margin: "0 auto",
+  padding: "14px 24px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+};
+
+const brand: React.CSSProperties = {
+  fontWeight: 800,
+  letterSpacing: 0.2,
+  padding: "6px 10px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.10)",
+  background: "rgba(255,255,255,0.04)",
+};
+
+const nav: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  alignItems: "center",
+};
+
+const navBtn: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.03)",
+  color: "white",
+  cursor: "pointer",
   fontSize: 13,
 };
 
+const navBtnActive: React.CSSProperties = {
+  border: "1px solid rgba(255,255,255,0.30)",
+  background: "rgba(255,255,255,0.08)",
+  fontWeight: 700,
+};
 
-   return (
-    <div style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          marginBottom: 16,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <b>Área Admin</b>
+const card: React.CSSProperties = {
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 14,
+  padding: 16,
+  background: "rgba(255,255,255,0.03)",
+};
 
-          <a href="/admin/familias" style={navLink}>Famílias</a>
-          <a href="/admin/equipe" style={navLink}>Equipe</a>
-          <a href="/admin/entregas" style={navLink}>Entregas</a>
-          <a href="/admin/estoque" style={navLink}>Estoque</a>
+const h1: React.CSSProperties = {
+  fontSize: 18,
+  margin: 0,
+};
 
+const muted: React.CSSProperties = {
+  margin: 0,
+  opacity: 0.8,
+};
 
-        </div>
+const btn: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.15)",
+  background: "transparent",
+  color: "white",
+  cursor: "pointer",
+};
 
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            router.push("/login");
-          }}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #333",
-            background: "transparent",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          Sair
-        </button>
-      </div>
-
-      {children}
-    </div>
-)};
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.15)",
+  background: "white",
+  color: "black",
+  cursor: "pointer",
+  fontWeight: 800,
+};
