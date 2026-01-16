@@ -1,16 +1,20 @@
 import React from "react";
 
 export const styles = {
-  page: { maxWidth: 1100, margin: "0 auto" } as React.CSSProperties,
-
+  page: {
+    maxWidth: 1100,
+    margin: "0 auto",
+    padding: "0 16px",
+  } as React.CSSProperties,
 
   card: {
     border: "1px solid rgba(0,0,0,0.12)",
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
-    background: "rgba(255,255,255,0.85)",
+    background: "rgba(255,255,255,0.88)",
     color: "#111",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
   } as React.CSSProperties,
 
   h2: { fontSize: 18, marginTop: 0, color: "inherit" } as React.CSSProperties,
@@ -21,7 +25,7 @@ export const styles = {
     padding: 10,
     borderRadius: 10,
     border: "1px solid rgba(0,0,0,0.16)",
-    background: "rgba(255,255,255,0.95)",
+    background: "rgba(255,255,255,0.96)",
     color: "#111",
     outline: "none",
   } as React.CSSProperties,
@@ -34,6 +38,7 @@ export const styles = {
     color: "#111",
     cursor: "pointer",
     fontWeight: 700,
+    whiteSpace: "nowrap",
   } as React.CSSProperties,
 
   btnPrimary: {
@@ -44,13 +49,14 @@ export const styles = {
     color: "white",
     cursor: "pointer",
     fontWeight: 800,
+    whiteSpace: "nowrap",
   } as React.CSSProperties,
 
   tableWrap: {
     border: "1px solid rgba(0,0,0,0.12)",
     borderRadius: 12,
     overflow: "hidden",
-    background: "rgba(255,255,255,0.9)",
+    background: "rgba(255,255,255,0.92)",
     color: "#111",
     width: "100%",
   } as React.CSSProperties,
@@ -68,19 +74,17 @@ export const styles = {
     fontWeight: 800,
     fontSize: 13,
     color: "inherit",
+    whiteSpace: "nowrap",
   } as React.CSSProperties,
 
-td: {
-  textAlign: "left",
-  padding: 12,
-  fontSize: 13,
-  borderTop: "1px solid rgba(0,0,0,0.08)",
-  color: "inherit",
-  whiteSpace: "normal",
-  wordBreak: "break-word",
-} as React.CSSProperties,
-
-
+  td: {
+    textAlign: "left",
+    padding: 12,
+    fontSize: 13,
+    borderTop: "1px solid rgba(0,0,0,0.08)",
+    color: "inherit",
+    verticalAlign: "top",
+  } as React.CSSProperties,
 
   pill: {
     border: "1px solid rgba(0,0,0,0.12)",
@@ -90,72 +94,93 @@ td: {
     color: "#111",
   } as React.CSSProperties,
 
-  // layout.tsx
+  // layout.tsx (navbar)
   navWrap: {
+    position: "sticky",
+    top: 0,
+    zIndex: 50,
     display: "flex",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 18,
     alignItems: "center",
-    flexWrap: "wrap",
+    padding: "10px 12px",
+    borderRadius: 14,
+    border: "1px solid rgba(0,0,0,0.10)",
+    background: "rgba(255,255,255,0.70)",
+    backdropFilter: "blur(10px)",
   } as React.CSSProperties,
 
-  navLeft: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } as React.CSSProperties,
+  navLeft: {
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+  } as React.CSSProperties,
 
   navLink: {
-    padding: "6px 10px",
-    borderRadius: 10,
+    padding: "7px 12px",
+    borderRadius: 999,
     border: "1px solid rgba(0,0,0,0.14)",
     color: "#111",
     textDecoration: "none",
     fontSize: 13,
-    background: "rgba(255,255,255,0.75)",
+    background: "rgba(255,255,255,0.80)",
+    whiteSpace: "nowrap",
+    flex: "0 0 auto",
   } as React.CSSProperties,
 
   navLinkActive: {
-    padding: "6px 10px",
-    borderRadius: 10,
+    padding: "7px 12px",
+    borderRadius: 999,
     border: "1px solid rgba(0,0,0,0.18)",
     color: "white",
     textDecoration: "none",
     fontSize: 13,
     background: "#111",
     fontWeight: 800,
+    whiteSpace: "nowrap",
+    flex: "0 0 auto",
   } as React.CSSProperties,
 };
 
 function GlobalThemeCSS() {
   return (
     <style jsx global>{`
-      /* fundo padrão da página no claro */
+      :root {
+        color-scheme: light dark;
+      }
+
       body {
         background: #f3f4f6;
         color: #111;
       }
 
-      /* Select/option no claro */
+      /* select/option no claro */
       select option {
         background: #fff;
         color: #111;
       }
 
-      /* ==== DARK MODE (automático pelo sistema) ==== */
+      /* dark mode automático */
       @media (prefers-color-scheme: dark) {
         body {
           background: #0b0f14;
           color: #fff;
         }
 
-        /* cards/inputs/bordas no dark */
         .ui-card {
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          background: rgba(255, 255, 255, 0.03) !important;
+          background: rgba(255, 255, 255, 0.04) !important;
           color: #fff !important;
+          box-shadow: none !important;
         }
 
         .ui-input {
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          background: rgba(255, 255, 255, 0.04) !important;
+          background: rgba(255, 255, 255, 0.05) !important;
           color: #fff !important;
         }
 
@@ -171,7 +196,7 @@ function GlobalThemeCSS() {
 
         .ui-tableWrap {
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          background: rgba(255, 255, 255, 0.02) !important;
+          background: rgba(255, 255, 255, 0.03) !important;
           color: #fff !important;
         }
 
@@ -185,36 +210,52 @@ function GlobalThemeCSS() {
 
         .ui-pill {
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          background: rgba(255, 255, 255, 0.02) !important;
+          background: rgba(255, 255, 255, 0.03) !important;
           color: #fff !important;
         }
 
         .ui-navLink {
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          background: rgba(255, 255, 255, 0.02) !important;
+          background: rgba(255, 255, 255, 0.03) !important;
           color: #fff !important;
         }
 
         .ui-navLinkActive {
-          background: rgba(255, 255, 255, 0.08) !important;
+          background: rgba(255, 255, 255, 0.10) !important;
           color: #fff !important;
           border: 1px solid rgba(255, 255, 255, 0.22) !important;
         }
 
-        /* Select/option no dark */
         select option {
           background: #0b0f14;
           color: #fff;
+        }
+      }
+
+      /* evita scrollbar feia no “tabs” da navbar */
+      .ui-navScroll::-webkit-scrollbar {
+        height: 6px;
+      }
+      .ui-navScroll::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 999px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ui-navScroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.15);
         }
       }
     `}</style>
   );
 }
 
+export function ThemeRoot() {
+  return <GlobalThemeCSS />;
+}
+
 export function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div className="ui-card" style={{ ...styles.card, ...(style || {}) }}>
-      <GlobalThemeCSS />
       {children}
     </div>
   );
@@ -248,42 +289,15 @@ export function Select({ style, children, ...props }: SelectProps) {
   );
 }
 
-export function Table({ children }: { children: React.ReactNode }) {
+export function Table({ children, minWidth = 860 }: { children: React.ReactNode; minWidth?: number }) {
   return (
     <div className="ui-tableWrap" style={styles.tableWrap}>
-      <div className="ui-tableScroll" style={{ width: "100%", overflowX: "auto" }}>
-        <table className="ui-table" style={styles.table}>
-          {children}
-        </table>
+      <div style={{ width: "100%", overflowX: "auto" }}>
+        <table style={{ ...styles.table, minWidth }}>{children}</table>
       </div>
-
-      <style jsx global>{`
-        /* Desktop: dá um “respiro” p/ tabela */
-        @media (min-width: 721px) {
-          .ui-table {
-            min-width: 820px;
-          }
-        }
-
-        /* Mobile: não força largura, e deixa as células quebrarem linha */
-        @media (max-width: 720px) {
-          .ui-table {
-            min-width: 0;
-          }
-          .ui-tableScroll {
-            overflow-x: hidden; /* evita “corte” feio */
-          }
-          .ui-td {
-            white-space: normal !important;
-            word-break: break-word !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
-
-
 
 export const th = styles.th;
 export const td = styles.td;
@@ -300,9 +314,13 @@ export function DesktopOnly({ children }: { children: React.ReactNode }) {
     <div className="ui-desktopOnly">
       {children}
       <style jsx global>{`
-        .ui-desktopOnly { display: block; }
+        .ui-desktopOnly {
+          display: block;
+        }
         @media (max-width: 720px) {
-          .ui-desktopOnly { display: none; }
+          .ui-desktopOnly {
+            display: none;
+          }
         }
       `}</style>
     </div>
@@ -314,9 +332,13 @@ export function MobileOnly({ children }: { children: React.ReactNode }) {
     <div className="ui-mobileOnly">
       {children}
       <style jsx global>{`
-        .ui-mobileOnly { display: none; }
+        .ui-mobileOnly {
+          display: none;
+        }
         @media (max-width: 720px) {
-          .ui-mobileOnly { display: block; }
+          .ui-mobileOnly {
+            display: block;
+          }
         }
       `}</style>
     </div>

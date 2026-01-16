@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Table, th, td } from "../_ui";
-
+import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles } from "../_ui";
 
 type DeliveryRow = {
   id: string;
@@ -201,7 +200,7 @@ export default function AdminEntregasPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100 }}>
+    <main style={styles.page}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Entregas</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
         Regra: <b>1 entrega por família por mês</b> (entregas estornadas não contam).
@@ -217,16 +216,12 @@ export default function AdminEntregasPage() {
         <H2>Resumo</H2>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={pill}>
+          <div className="ui-pill" style={styles.pill}>
             <b>Cestas prontas:</b> {readyQty}
           </div>
 
           <div style={{ flex: 1, minWidth: 260 }}>
-            <Input
-              placeholder="Buscar família (nome, endereço, cpf)..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+            <Input placeholder="Buscar família (nome, endereço, cpf)..." value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
 
           <Button onClick={loadAll}>Atualizar</Button>
@@ -299,109 +294,152 @@ export default function AdminEntregasPage() {
       {loading ? (
         <p>Carregando...</p>
       ) : (
-        <Card>
-          <H2>Famílias</H2>
+        <>
+          {/* DESKTOP: tabela */}
+          <DesktopOnly>
+            <Card>
+              <H2>Famílias</H2>
 
-          <Table>
-            <thead>
-              <tr>
-                <th style={th}>Família</th>
-                <th style={th}>Endereço</th>
-                <th style={th}>Status</th>
-                <th style={th}>Recebeu este mês?</th>
-                <th style={th}>Ações</th>
-              </tr>
-            </thead>
+              <Table minWidth={920}>
+                <thead>
+                  <tr className="ui-trHead">
+                    <th style={th}>Família</th>
+                    <th style={th}>Endereço</th>
+                    <th style={th}>Status</th>
+                    <th style={th}>Recebeu este mês?</th>
+                    <th style={th}>Ações</th>
+                  </tr>
+                </thead>
 
-            <tbody>
+                <tbody>
+                  {filtered.map((f) => {
+                    const already = deliveriesThisMonth.has(f.id);
+                    const last = deliveriesThisMonth.get(f.id);
+                    const gate = canDeliver(f);
+
+                    return (
+                      <tr key={f.id}>
+                        <td className="ui-td" style={td}>
+                          <div style={{ fontWeight: 700 }}>{getFamilyName(f)}</div>
+                          <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${f.cpf}` : ""}</div>
+                        </td>
+
+                        <td className="ui-td" style={td}>
+                          {getFamilyAddress(f) ? String(getFamilyAddress(f)) : <span style={{ opacity: 0.6 }}>(sem endereço)</span>}
+                        </td>
+
+                        <td className="ui-td" style={td}>
+                          <div>
+                            <b>{String(f.status || "PENDING").toUpperCase()}</b>
+                            {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
+                          </div>
+
+                          {!gate.ok && <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{gate.reason}</div>}
+                        </td>
+
+                        <td className="ui-td" style={td}>
+                          {already ? <span>Sim — {new Date(last!.delivered_at).toLocaleDateString()}</span> : "Não"}
+                        </td>
+
+                        <td className="ui-td" style={td}>
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                            <Button
+                              variant="primary"
+                              onClick={() => deliverToFamily(f)}
+                              disabled={!gate.ok}
+                              title={!gate.ok ? gate.reason : undefined}
+                            >
+                              Entregar 1 cesta
+                            </Button>
+
+                            <Button
+                              onClick={() => reverseForFamily(f.id)}
+                              disabled={!already}
+                              title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
+                            >
+                              Estornar
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td className="ui-td" style={td} colSpan={5}>
+                        Nenhuma família encontrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </Card>
+          </DesktopOnly>
+
+          {/* MOBILE: cards */}
+          <MobileOnly>
+            <div style={{ display: "grid", gap: 12 }}>
               {filtered.map((f) => {
+                const gate = canDeliver(f);
                 const already = deliveriesThisMonth.has(f.id);
                 const last = deliveriesThisMonth.get(f.id);
-                const gate = canDeliver(f);
 
                 return (
-                  <tr key={f.id}>
-                    <td className="ui-td" style={td}>
-                      <div style={{ fontWeight: 700 }}>{getFamilyName(f)}</div>
-                      <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${f.cpf}` : ""}</div>
-                    </td>
+                  <Card key={f.id}>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>{getFamilyName(f)}</div>
 
-                    <td className="ui-td" style={td}>
-                      {getFamilyAddress(f) ? (
-                        String(getFamilyAddress(f))
-                      ) : (
-                        <span style={{ opacity: 0.6 }}>(sem endereço)</span>
-                      )}
-                    </td>
+                    {f.cpf && <div style={{ marginTop: 4, opacity: 0.85 }}>CPF: {String(f.cpf)}</div>}
 
-                    <td className="ui-td" style={td}>
-                      <div>
-                        <b>{String(f.status || "PENDING").toUpperCase()}</b>
-                        {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
-                      </div>
+                    <div style={{ marginTop: 8, opacity: 0.9 }}>
+                      {getFamilyAddress(f) ? String(getFamilyAddress(f)) : "(sem endereço)"}
+                    </div>
 
-                      {!gate.ok && (
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{gate.reason}</div>
-                      )}
-                    </td>
+                    <div style={{ marginTop: 10 }}>
+                      <b>Status:</b> {String(f.status || "PENDING").toUpperCase()}
+                      {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
+                    </div>
 
-                    <td className="ui-td" style={td}>
-                      {already ? (
-                        <span>Sim — {new Date(last!.delivered_at).toLocaleDateString()}</span>
-                      ) : (
-                        "Não"
-                      )}
-                    </td>
+                    <div style={{ marginTop: 6 }}>
+                      <b>Este mês:</b> {already ? `Sim (${new Date(last!.delivered_at).toLocaleDateString()})` : "Não"}
+                    </div>
 
-                    <td className="ui-td" style={td}>
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                       <Button
-  variant="primary"
-  onClick={() => deliverToFamily(f)}
-  disabled={!gate.ok}
-  title={!gate.ok ? gate.reason : undefined}
->
-  Entregar 1 cesta
-</Button>
+                    {!gate.ok && <div style={{ marginTop: 8, opacity: 0.8, fontSize: 13 }}>{gate.reason}</div>}
 
+                    <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+                      <Button
+                        variant="primary"
+                        onClick={() => deliverToFamily(f)}
+                        disabled={!gate.ok}
+                        title={!gate.ok ? gate.reason : undefined}
+                      >
+                        Entregar 1 cesta
+                      </Button>
 
-
-                        <Button
-  onClick={() => reverseForFamily(f.id)}
-  disabled={!already}
-  title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
->
-  Estornar
-</Button>
-
-
-                      </div>
-                    </td>
-                  </tr>
+                      <Button
+                        onClick={() => reverseForFamily(f.id)}
+                        disabled={!already}
+                        title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
+                      >
+                        Estornar
+                      </Button>
+                    </div>
+                  </Card>
                 );
               })}
 
               {filtered.length === 0 && (
-                <tr>
-                  <td className="ui-td" style={td} colSpan={5}>
-                    Nenhuma família encontrada.
-                  </td>
-                </tr>
+                <Card>
+                  <div>Nenhuma família encontrada.</div>
+                </Card>
               )}
-            </tbody>
-          </Table>
-        </Card>
+            </div>
+          </MobileOnly>
+        </>
       )}
     </main>
   );
 }
-
-const pill: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,0.15)",
-  borderRadius: 999,
-  padding: "8px 12px",
-  background: "rgba(255,255,255,0.02)",
-};
 
 const labelBox: React.CSSProperties = {
   border: "2px dashed rgba(255,255,255,0.4)",

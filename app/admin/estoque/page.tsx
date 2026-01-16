@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Select, Table, th, td, MobileOnly, DesktopOnly } from "../_ui";
-
-
-
-
+import {
+  Card,
+  H2,
+  Button,
+  Input,
+  Select,
+  Table,
+  th,
+  td,
+  MobileOnly,
+  DesktopOnly,
+  styles,
+} from "../_ui";
 
 type Item = {
   id: string;
@@ -69,7 +77,6 @@ export default function AdminEstoquePage() {
     setLoading(true);
     setMsg(null);
 
-    // 1) itens
     const { data: itemsData, error: itemsErr } = await supabase
       .from("stock_items")
       .select("id,name,unit,is_active")
@@ -82,7 +89,6 @@ export default function AdminEstoquePage() {
       return;
     }
 
-    // 2) saldos
     const { data: balData, error: balErr } = await supabase
       .from("stock_balances")
       .select("item_id,qty,stock_items(id,name,unit)")
@@ -94,7 +100,6 @@ export default function AdminEstoquePage() {
       return;
     }
 
-    // 3) receita
     const { data: recipeData, error: recipeErr } = await supabase.from("basket_recipe").select("item_id,qty_needed");
 
     if (recipeErr) {
@@ -103,8 +108,11 @@ export default function AdminEstoquePage() {
       return;
     }
 
-    // 4) cestas prontas
-    const { data: readyData, error: readyErr } = await supabase.from("baskets_ready").select("qty").eq("id", 1).single();
+    const { data: readyData, error: readyErr } = await supabase
+      .from("baskets_ready")
+      .select("qty")
+      .eq("id", 1)
+      .single();
 
     if (readyErr) {
       setMsg(readyErr.message);
@@ -112,7 +120,6 @@ export default function AdminEstoquePage() {
       return;
     }
 
-    // 5) histórico (últimos 30)
     const { data: movesData, error: movesErr } = await supabase
       .from("stock_moves")
       .select("id,created_at,item_id,move_type,qty,note,stock_items(id,name,unit)")
@@ -233,7 +240,9 @@ export default function AdminEstoquePage() {
 
     if (moveErr) return setMsg(moveErr.message);
 
-    const { error: balErr } = await supabase.from("stock_balances").upsert({ item_id: move.item_id, qty: current + delta });
+    const { error: balErr } = await supabase
+      .from("stock_balances")
+      .upsert({ item_id: move.item_id, qty: current + delta });
 
     if (balErr) return setMsg(balErr.message);
 
@@ -261,9 +270,7 @@ export default function AdminEstoquePage() {
 
     const missing = missingForOneBasket();
     if (missing.length > 0) {
-      return setMsg(
-        "Faltando para 1 cesta: " + missing.map((m) => `${m.name} (${m.have}/${m.need} ${m.unit})`).join(", ")
-      );
+      return setMsg("Faltando para 1 cesta: " + missing.map((m) => `${m.name} (${m.have}/${m.need} ${m.unit})`).join(", "));
     }
 
     for (const r of recipe) {
@@ -291,7 +298,7 @@ export default function AdminEstoquePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <main style={styles.page}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Estoque</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>Controle de itens, entradas/saídas e montagem de cestas.</p>
 
@@ -396,155 +403,198 @@ export default function AdminEstoquePage() {
           </div>
 
           <Card>
-  <H2>Saldos + Padrão da Cesta</H2>
+            <H2>Saldos + Padrão da Cesta</H2>
 
-  {/* MOBILE: cards */}
-  <MobileOnly>
-    <div style={{ display: "grid", gap: 10 }}>
-      {items.map((i) => {
-        const bal = balanceMap.get(i.id) ?? 0;
-        const need = recipeMap.get(i.id) ?? 0;
+            {/* MOBILE: cards (usando o mesmo padrão do Card/Theme) */}
+            <MobileOnly>
+              <div style={{ display: "grid", gap: 12 }}>
+                {items.map((i) => {
+                  const bal = balanceMap.get(i.id) ?? 0;
+                  const need = recipeMap.get(i.id) ?? 0;
 
-        return (
-          <div
-            key={i.id}
-            style={{
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 12,
-              padding: 12,
-              background: "rgba(255,255,255,0.02)",
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>
-              {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
-            </div>
+                  return (
+                    <Card key={i.id} style={{ marginBottom: 0, padding: 14 }}>
+                      <div style={{ fontWeight: 900, fontSize: 15 }}>
+                        {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
+                      </div>
 
-            <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ opacity: 0.9 }}>
-                <b>Saldo:</b> {bal}
+                      <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ opacity: 0.95 }}>
+                          <b>Saldo:</b> {bal}
+                        </div>
+                        <div style={{ opacity: 0.95 }}>
+                          <b>Padrão:</b> {need || 0}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Editar padrão</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          defaultValue={need}
+                          onBlur={(e) => {
+                            const v = Number(e.target.value);
+                            if (!v) return; // mantém regra atual (ignora 0/vazio)
+                            saveRecipe(i.id, v);
+                          }}
+                          placeholder="Ex: 1"
+                        />
+                        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+                          (salva ao sair do campo)
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+
+                {items.length === 0 && <div style={{ opacity: 0.75 }}>Nenhum item cadastrado ainda.</div>}
               </div>
-              <div style={{ opacity: 0.9 }}>
-                <b>Padrão:</b> {need || 0}
-              </div>
-            </div>
+            </MobileOnly>
 
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Editar padrão</div>
-              <Input
-                type="number"
-                min={0}
-                defaultValue={need}
-                onBlur={(e) => {
-                  const v = Number(e.target.value);
-                  if (!v) return;
-                  saveRecipe(i.id, v);
-                }}
-                placeholder="Ex: 1"
-              />
-            </div>
-          </div>
-        );
-      })}
+            {/* DESKTOP: tabela */}
+            <DesktopOnly>
+              <Table>
+                <thead>
+                  <tr className="ui-trHead">
+                    <th style={th}>Item</th>
+                    <th style={th}>Saldo</th>
+                    <th style={th}>Padrão (por cesta)</th>
+                    <th style={th}>Ação</th>
+                  </tr>
+                </thead>
 
-      {items.length === 0 && <div style={{ opacity: 0.75 }}>Nenhum item cadastrado ainda.</div>}
-    </div>
-  </MobileOnly>
+                <tbody>
+                  {items.map((i) => {
+                    const bal = balanceMap.get(i.id) ?? 0;
+                    const need = recipeMap.get(i.id) ?? 0;
 
-  {/* DESKTOP: tabela */}
-  <DesktopOnly>
-    <Table>
-      <thead>
-        <tr>
-          <th style={th}>Item</th>
-          <th style={th}>Saldo</th>
-          <th style={th}>Padrão (por cesta)</th>
-          <th style={th}>Ação</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((i) => {
-          const bal = balanceMap.get(i.id) ?? 0;
-          const need = recipeMap.get(i.id) ?? 0;
+                    return (
+                      <tr key={i.id}>
+                        <td className="ui-td" style={td}>
+                          {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
+                        </td>
+                        <td className="ui-td" style={td}>
+                          {bal}
+                        </td>
+                        <td className="ui-td" style={td}>
+                          <Input
+                            type="number"
+                            min={0}
+                            defaultValue={need}
+                            onBlur={(e) => {
+                              const v = Number(e.target.value);
+                              if (!v) return;
+                              saveRecipe(i.id, v);
+                            }}
+                            style={{ maxWidth: 160 }}
+                            placeholder="Ex: 1"
+                          />
+                        </td>
+                        <td className="ui-td" style={td}>
+                          <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
 
-          return (
-            <tr key={i.id}>
-              <td className="ui-td" style={td}>
+                  {items.length === 0 && (
+                    <tr>
+                      <td className="ui-td" style={td} colSpan={4}>
+                        Nenhum item cadastrado ainda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </DesktopOnly>
 
-                {i.name} <span style={{ opacity: 0.7 }}>({i.unit})</span>
-              </td>
-              <td className="ui-td" style={td}>
-{bal}</td>
-              <td className="ui-td" style={td}>
-
-                <Input
-                  type="number"
-                  min={0}
-                  defaultValue={need}
-                  onBlur={(e) => {
-                    const v = Number(e.target.value);
-                    if (!v) return;
-                    saveRecipe(i.id, v);
-                  }}
-                  style={{ maxWidth: 160 }}
-                  placeholder="Ex: 1"
-                />
-              </td>
-              <td className="ui-td" style={td}>
-
-                <span style={{ opacity: 0.7, fontSize: 12 }}>(salva ao sair do campo)</span>
-              </td>
-            </tr>
-          );
-        })}
-
-        {items.length === 0 && (
-          <tr>
-            <td className="ui-td" style={td} colSpan={4}>Nenhum item cadastrado ainda.</td>
-          </tr>
-        )}
-      </tbody>
-    </Table>
-  </DesktopOnly>
-</Card>
-
+            <p style={{ marginTop: 10, opacity: 0.8 }}>
+              Dica: Defina o padrão da cesta preenchendo “Padrão”. O sistema calcula quantas cestas dá pra montar.
+            </p>
+          </Card>
 
           <Card>
             <H2>Histórico (últimos 30 movimentos)</H2>
 
-            <Table>
-              <thead>
-                <tr>
-                  <th style={th}>Data</th>
-                  <th style={th}>Item</th>
-                  <th style={th}>Tipo</th>
-                  <th style={th}>Qtd</th>
-                  <th style={th}>Obs</th>
-                </tr>
-              </thead>
+            {/* MOBILE: cards (pra não ficar tabela esmagada) */}
+            <MobileOnly>
+              <div style={{ display: "grid", gap: 12 }}>
+                {moves.map((m) => {
+                  const it = oneItem(m.stock_items);
+                  const when = new Date(m.created_at).toLocaleString();
+                  const typeLabel = m.move_type === "IN" ? "Entrada" : "Saída";
 
-              <tbody>
-                {moves.map((m) => (
-                  <tr key={m.id}>
-                    <td className="ui-td" style={td}>{new Date(m.created_at).toLocaleString()}</td>
-                    <td className="ui-td" style={td}>
-                      {oneItem(m.stock_items)?.name || "Item"}{" "}
-                      <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
-                    </td>
-                    <td className="ui-td" style={td}>{m.move_type === "IN" ? "Entrada" : "Saída"}</td>
-                    <td className="ui-td" style={td}>{m.qty}</td>
-                    <td className="ui-td" style={td}>{m.note || "-"}</td>
-                  </tr>
-                ))}
+                  return (
+                    <Card key={m.id} style={{ marginBottom: 0, padding: 14 }}>
+                      <div style={{ fontWeight: 900, fontSize: 14 }}>{typeLabel}</div>
+                      <div style={{ marginTop: 6, opacity: 0.85, fontSize: 12 }}>{when}</div>
 
-                {moves.length === 0 && (
-                  <tr>
-                    <td className="ui-td" style={td} colSpan={5}>
-                      Nenhum movimento registrado ainda.
-                    </td>
+                      <div style={{ marginTop: 10 }}>
+                        <b>Item:</b> {it?.name || "Item"}{" "}
+                        <span style={{ opacity: 0.7 }}>({it?.unit || "un"})</span>
+                      </div>
+
+                      <div style={{ marginTop: 6 }}>
+                        <b>Qtd:</b> {m.qty}
+                      </div>
+
+                      <div style={{ marginTop: 6, opacity: 0.9 }}>
+                        <b>Obs:</b> {m.note || "-"}
+                      </div>
+                    </Card>
+                  );
+                })}
+
+                {moves.length === 0 && <div style={{ opacity: 0.75 }}>Nenhum movimento registrado ainda.</div>}
+              </div>
+            </MobileOnly>
+
+            {/* DESKTOP: tabela */}
+            <DesktopOnly>
+              <Table minWidth={860}>
+                <thead>
+                  <tr className="ui-trHead">
+                    <th style={th}>Data</th>
+                    <th style={th}>Item</th>
+                    <th style={th}>Tipo</th>
+                    <th style={th}>Qtd</th>
+                    <th style={th}>Obs</th>
                   </tr>
-                )}
-              </tbody>
-            </Table>
+                </thead>
+
+                <tbody>
+                  {moves.map((m) => (
+                    <tr key={m.id}>
+                      <td className="ui-td" style={td}>
+                        {new Date(m.created_at).toLocaleString()}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {oneItem(m.stock_items)?.name || "Item"}{" "}
+                        <span style={{ opacity: 0.7 }}>({oneItem(m.stock_items)?.unit || "un"})</span>
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {m.move_type === "IN" ? "Entrada" : "Saída"}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {m.qty}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {m.note || "-"}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {moves.length === 0 && (
+                    <tr>
+                      <td className="ui-td" style={td} colSpan={5}>
+                        Nenhum movimento registrado ainda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </DesktopOnly>
 
             <p style={{ marginTop: 10, opacity: 0.75 }}>Mostrando os últimos 30 movimentos.</p>
           </Card>
@@ -555,8 +605,8 @@ export default function AdminEstoquePage() {
 }
 
 const pill: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,0.15)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 999,
   padding: "8px 12px",
-  background: "rgba(255,255,255,0.02)",
+  background: "rgba(255,255,255,0.75)",
 };

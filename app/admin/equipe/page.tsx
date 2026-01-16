@@ -1,7 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  Card,
+  H2,
+  Button,
+  Input,
+  Table,
+  th,
+  td,
+  DesktopOnly,
+  MobileOnly,
+  styles,
+} from "../_ui";
 
 type ProfileRow = {
   id: string;
@@ -68,10 +80,7 @@ export default function AdminEquipePage() {
   async function setRole(p: ProfileRow, role: "ADMIN" | "STAFF" | "FAMILY") {
     setMsg(null);
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role })
-      .eq("id", p.id);
+    const { error } = await supabase.from("profiles").update({ role }).eq("id", p.id);
 
     if (error) return setMsg(error.message);
 
@@ -79,127 +88,154 @@ export default function AdminEquipePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100 }}>
+    <main style={styles.page}>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Equipe</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
         Aqui você define quem é <b>STAFF</b> (equipe) e pode ativar/desativar usuários.
       </p>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "16px 0" }}>
-        <input
-          placeholder="Buscar por nome/role..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          style={inputStyle}
-        />
-        <button onClick={loadProfiles} style={btn}>
-          Atualizar
-        </button>
-      </div>
-
-      <div style={{ border: "1px solid #333", borderRadius: 10, padding: 12, marginBottom: 14, opacity: 0.9 }}>
-        <b>MVP (forma simples de adicionar voluntário):</b>
-        <ol style={{ marginTop: 8, lineHeight: 1.5 }}>
-          <li>Supabase → Authentication → Users → <b>Add user</b> (marque Email confirmed)</li>
-          <li>O profile vai aparecer aqui automaticamente</li>
-          <li>Aqui você muda o role dele para <b>STAFF</b></li>
-        </ol>
-      </div>
-
       {msg && (
-        <div style={{ padding: 12, border: "1px solid #a33", borderRadius: 8, marginBottom: 12 }}>
+        <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
           {msg}
         </div>
       )}
 
+      <Card>
+        <H2>Buscar</H2>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <Input
+              placeholder="Buscar por nome/role..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+
+          <Button onClick={loadProfiles}>Atualizar</Button>
+        </div>
+      </Card>
+
+      <Card>
+        <H2>MVP (forma simples de adicionar voluntário)</H2>
+        <ol style={{ marginTop: 8, lineHeight: 1.6, paddingLeft: 18, opacity: 0.95 }}>
+          <li>
+            Supabase → Authentication → Users → <b>Add user</b> (marque Email confirmed)
+          </li>
+          <li>O profile vai aparecer aqui automaticamente</li>
+          <li>
+            Aqui você muda o role dele para <b>STAFF</b>
+          </li>
+        </ol>
+      </Card>
+
       {loading ? (
         <p>Carregando...</p>
       ) : (
-        <div style={{ border: "1px solid #333", borderRadius: 10, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "rgba(255,255,255,0.06)" }}>
-                <th style={th}>Nome</th>
-                <th style={th}>Role</th>
-                <th style={th}>Ativo</th>
-                <th style={th}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} style={{ borderTop: "1px solid #333" }}>
-                  <td className="ui-td" style={td}>{p.full_name || "(sem nome)"}</td>
-                  <td className="ui-td" style={td}>{p.role}</td>
-                  <td className="ui-td" style={td}>{p.is_active ? "Sim" : "Não"}</td>
-                  <td style={{ ...td, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={() => toggleActive(p)} style={smallBtn}>
-                      {p.is_active ? "Desativar" : "Ativar"}
-                    </button>
+        <>
+          {/* DESKTOP: tabela */}
+          <DesktopOnly>
+            <Card>
+              <H2>Usuários</H2>
 
-                    <button onClick={() => setRole(p, "STAFF")} style={smallBtn}>
-                      STAFF
-                    </button>
-                    <button onClick={() => setRole(p, "FAMILY")} style={smallBtn}>
-                      FAMILY
-                    </button>
-                    <button onClick={() => setRole(p, "ADMIN")} style={smallBtn}>
-                      ADMIN
-                    </button>
-                  </td>
-                </tr>
+              <Table minWidth={860}>
+                <thead>
+                  <tr className="ui-trHead">
+                    <th style={th}>Nome</th>
+                    <th style={th}>Role</th>
+                    <th style={th}>Ativo</th>
+                    <th style={th}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((p) => (
+                    <tr key={p.id}>
+                      <td className="ui-td" style={td}>
+                        {p.full_name || "(sem nome)"}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {p.role}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        {p.is_active ? "Sim" : "Não"}
+                      </td>
+                      <td className="ui-td" style={td}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <Button onClick={() => toggleActive(p)} style={miniBtnStyle}>
+                            {p.is_active ? "Desativar" : "Ativar"}
+                          </Button>
+
+                          <Button onClick={() => setRole(p, "STAFF")} style={miniBtnStyle}>
+                            STAFF
+                          </Button>
+                          <Button onClick={() => setRole(p, "FAMILY")} style={miniBtnStyle}>
+                            FAMILY
+                          </Button>
+                          <Button onClick={() => setRole(p, "ADMIN")} style={miniBtnStyle}>
+                            ADMIN
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td className="ui-td" style={td} colSpan={4}>
+                        Nenhum usuário encontrado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </Card>
+          </DesktopOnly>
+
+          {/* MOBILE: cards */}
+          <MobileOnly>
+            <div style={{ display: "grid", gap: 12 }}>
+              {filtered.map((p) => (
+                <Card key={p.id}>
+                  <div style={{ fontWeight: 900, fontSize: 16 }}>{p.full_name || "(sem nome)"}</div>
+
+                  <div style={{ marginTop: 8, opacity: 0.9 }}>
+                    <b>Role:</b> {p.role}
+                  </div>
+
+                  <div style={{ marginTop: 6, opacity: 0.9 }}>
+                    <b>Ativo:</b> {p.is_active ? "Sim" : "Não"}
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+                    <Button variant="primary" onClick={() => toggleActive(p)}>
+                      {p.is_active ? "Desativar" : "Ativar"}
+                    </Button>
+
+                    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
+                      <Button onClick={() => setRole(p, "STAFF")}>STAFF</Button>
+                      <Button onClick={() => setRole(p, "FAMILY")}>FAMILY</Button>
+                    </div>
+
+                    <Button onClick={() => setRole(p, "ADMIN")}>ADMIN</Button>
+                  </div>
+                </Card>
               ))}
+
               {filtered.length === 0 && (
-                <tr>
-                  <td className="ui-td" style={td} colSpan={4}>
-                    Nenhum usuário encontrado.
-                  </td>
-                </tr>
+                <Card>
+                  <div>Nenhum usuário encontrado.</div>
+                </Card>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </MobileOnly>
+        </>
       )}
     </main>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: 10,
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-};
-
-const btn: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-  cursor: "pointer",
-};
-
-const smallBtn: React.CSSProperties = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid #333",
-  background: "transparent",
-  color: "white",
-  cursor: "pointer",
+const miniBtnStyle: React.CSSProperties = {
+  padding: "7px 10px",
+  borderRadius: 999,
   fontSize: 12,
-};
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontWeight: 600,
-  fontSize: 13,
-};
-
-const td: React.CSSProperties = {
-  textAlign: "left",
-  padding: 12,
-  fontSize: 13,
 };
