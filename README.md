@@ -61,7 +61,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 npm run dev
 Acesse:
 
-http://localhost:3000/login
+[http://localhost:3000/login
 
 
 📜 Regras de Negócio
@@ -81,4 +81,20 @@ Perfil: admin
 ⚠️ Não usar em produção
 
 📄 Licença
-Projeto de uso interno do CEAMI
+Projeto de uso interno do CEAMI](http://localhost:3000/login
+
+---
+
+## 📜 Regras de Negócio
+
+- Apenas famílias **APPROVED** e `is_active = true` recebem cesta
+- Cada família pode receber **1 cesta por mês**
+- Entregas podem ser **estornadas**, mantendo histórico
+- Estoque sempre reflete **entradas e saídas**
+
+---
+
+## 🧪 Usuário de Teste (dev)
+
+- **Email:** teste@gmail.com
+)
