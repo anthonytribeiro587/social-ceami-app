@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Social CEAMI App
 
-## Getting Started
+Sistema web para gestão social desenvolvido para o CEAMI, com foco no controle de famílias cadastradas, estoque, montagem de cestas básicas e entregas mensais.
 
-First, run the development server:
+---
 
-```bash
+## ✨ Funcionalidades
+
+### 👨‍👩‍👧‍👦 Famílias
+- Cadastro de famílias
+- Status: PENDING, APPROVED, REJECTED
+- Controle de ativação (is_active)
+- CPF único por família
+- Alerta de endereço duplicado
+- Apenas famílias aprovadas e ativas podem receber cestas
+
+### 📦 Estoque
+- Cadastro de itens
+- Entrada e saída de estoque
+- Controle de saldo por item
+- Histórico de movimentações
+- Receita da cesta
+
+### 🧺 Cestas & Entregas
+- Montagem de cestas com base no estoque
+- Regra: 1 entrega por família por mês
+- Registro de responsável pela entrega
+- Possibilidade de estorno com histórico
+
+### 🔐 Autenticação
+- Login via Supabase Auth
+- Rotas administrativas protegidas
+- Acesso restrito à área /admin
+- Controle de permissões por perfil
+
+---
+
+## 🛠️ Tecnologias
+
+- Next.js (App Router)
+- TypeScript
+- Supabase (Auth + PostgreSQL)
+- Tailwind CSS
+
+---
+
+## 🚀 Como rodar o projeto
+
+### 1️⃣ Clonar o repositório
+
+git clone https://github.com/seu-usuario/social-ceami-app.git
+cd social-ceami-app
+2️⃣ Instalar dependências
+npm install
+3️⃣ Variáveis de ambiente
+Crie um arquivo .env.local:
+
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+4️⃣ Rodar o projeto
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Acesse:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000/login
+📜 Regras de Negócio
+Apenas famílias APPROVED e is_active = true recebem cesta
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Cada família pode receber 1 cesta por mês
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Entregas podem ser estornadas, mantendo histórico
 
-## Learn More
+Estoque sempre reflete entradas e saídas
 
-To learn more about Next.js, take a look at the following resources:
+🧪 Usuário de Teste (dev)
+Email: teste@gmail.com
+Senha: 321
+Perfil: admin
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+⚠️ Não usar em produção
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+📄 Licença
+Projeto de uso interno do CEAMI
