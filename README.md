@@ -62,6 +62,8 @@ npm run dev
 Acesse:
 
 http://localhost:3000/login
+
+
 📜 Regras de Negócio
 Apenas famílias APPROVED e is_active = true recebem cesta
 
