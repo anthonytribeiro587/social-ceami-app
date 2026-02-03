@@ -14,7 +14,8 @@ import {
   DesktopOnly,
   MobileOnly,
   styles,
-  StatusBadge
+  StatusBadge,
+  PageHeader
 } from "../_ui";
 
 type FamilyRow = {
@@ -244,10 +245,15 @@ export default function AdminFamiliasPage() {
 
   return (
     <main style={styles.page}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Famílias</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Cadastro manual entra como <b>PENDING</b> e precisa ser <b>APPROVED</b> para receber cesta.
-      </p>
+      <PageHeader
+  title="Admin • Famílias"
+  subtitle={
+    <>
+      Cadastro manual entra como <b>PENDING</b> e precisa ser <b>APPROVED</b> para receber cesta.
+    </>
+  }
+/>
+
 
       {errorMsg && (
         <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
@@ -438,43 +444,40 @@ export default function AdminFamiliasPage() {
       </td>
 
       <td className="ui-td" style={td}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button
-            onClick={() => setFamilyStatus(r.id, "APPROVED")}
-            disabled={st === "APPROVED"}
-            title="Aprovar"
-            style={miniBtnStyle}
-          >
-            Aprovar
-          </Button>
+  <div style={actionsRow}>
+    <Button
+      onClick={() => setFamilyStatus(r.id, "APPROVED")}
+      disabled={st === "APPROVED"}
+      style={miniBtnStyle}
+      title="Aprovar"
+    >
+      Aprovar
+    </Button>
 
-          <Button
-            onClick={() => setFamilyStatus(r.id, "REJECTED")}
-            disabled={st === "REJECTED"}
-            title="Rejeitar"
-            style={miniBtnStyle}
-          >
-            Rejeitar
-          </Button>
+    <Button
+      onClick={() => setFamilyStatus(r.id, "REJECTED")}
+      disabled={st === "REJECTED"}
+      style={miniBtnStyle}
+      title="Rejeitar"
+    >
+      Rejeitar
+    </Button>
 
-          <Button
-            onClick={() => setFamilyStatus(r.id, "PENDING")}
-            disabled={st === "PENDING"}
-            title="Voltar para pendente"
-            style={miniBtnStyle}
-          >
-            Pendente
-          </Button>
+    <Button
+      onClick={() => setFamilyStatus(r.id, "PENDING")}
+      disabled={st === "PENDING"}
+      style={miniBtnStyle}
+      title="Voltar para pendente"
+    >
+      Pendente
+    </Button>
 
-          <Button
-            onClick={() => toggleActive(r.id, !active)}
-            title={active ? "Desativar" : "Ativar"}
-            style={miniBtnStyle}
-          >
-            {active ? "Desativar" : "Ativar"}
-          </Button>
-        </div>
-      </td>
+  </div>
+</td>
+
+
+
+
     </tr>
   );
 })}
@@ -543,8 +546,6 @@ export default function AdminFamiliasPage() {
                           Rejeitar
                         </Button>
                       </div>
-
-                      <Button onClick={() => toggleActive(r.id, !active)}>{active ? "Desativar" : "Ativar"}</Button>
                     </div>
                   </Card>
                 );
@@ -573,4 +574,39 @@ const miniBtnStyle: React.CSSProperties = {
   padding: "7px 10px",
   borderRadius: 999,
   fontSize: 12,
+};
+const actionsWrap: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  justifyItems: "start",
+};
+
+const seg: React.CSSProperties = {
+  display: "inline-flex",
+  border: "1px solid rgba(0,0,0,0.14)",
+  borderRadius: 999,
+  overflow: "hidden",
+  background: "rgba(255,255,255,0.75)",
+};
+
+const segBtn: React.CSSProperties = {
+  padding: "7px 10px",
+  fontSize: 12,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontWeight: 800,
+};
+
+const segBtnDisabled: React.CSSProperties = {
+  ...segBtn,
+  opacity: 0.45,
+  cursor: "not-allowed",
+};
+const actionsRow: React.CSSProperties = {
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+  flexWrap: "nowrap",        // <- NÃO quebra linha
+  whiteSpace: "nowrap",      // <- garante texto em uma linha
 };

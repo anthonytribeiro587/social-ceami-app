@@ -1,5 +1,6 @@
 import React from "react";
 
+
 export const styles = {
   page: {
     maxWidth: 1100,
@@ -378,5 +379,64 @@ export function MobileOnly({ children }: { children: React.ReactNode }) {
         {right ? <div>{right}</div> : null}
       </div>
     </div>
+  );
+}
+
+export function StatusBadge({
+  status,
+}: {
+  status: "APPROVED" | "PENDING" | "REJECTED" | string;
+}) {
+  const s = (status || "").toUpperCase();
+
+  const map: Record<string, { label: string; bg: string; bd: string; fg: string }> = {
+    APPROVED: {
+      label: "Aprovado",
+      bg: "rgba(34,197,94,0.18)",
+      bd: "rgba(34,197,94,0.45)",
+      fg: "#16a34a",
+    },
+    PENDING: {
+      label: "Pendente",
+      bg: "rgba(234,179,8,0.18)",
+      bd: "rgba(234,179,8,0.45)",
+      fg: "#a16207",
+    },
+    REJECTED: {
+      label: "Rejeitado",
+      bg: "rgba(239,68,68,0.18)",
+      bd: "rgba(239,68,68,0.45)",
+      fg: "#dc2626",
+    },
+  };
+
+  const cfg = map[s] || {
+    label: s || "-",
+    bg: "rgba(255,255,255,0.08)",
+    bd: "rgba(255,255,255,0.18)",
+    fg: "inherit",
+  };
+
+  return (
+    <span
+      className="ui-pill"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "6px 10px",
+        borderRadius: 999,
+        border: `1px solid ${cfg.bd}`,
+        background: cfg.bg,
+        color: cfg.fg,
+        fontWeight: 800,
+        fontSize: 12,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+      title={s}
+    >
+      {cfg.label}
+    </span>
   );
 }

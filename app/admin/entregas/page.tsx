@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles, PageHeader } from "../_ui";
+import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles, PageHeader, StatusBadge } from "../_ui";
 
 type DeliveryRow = {
   id: string;
@@ -32,6 +32,13 @@ export default function AdminEntregasPage() {
     return f.members_count ?? f.members ?? f.family_size ?? f.qtd_pessoas ?? f.pessoas ?? null;
   }
 
+  function normalizeStatus(s: string | null | undefined) {
+  const up = String(s || "").trim().toUpperCase();
+  if (up === "APPROVED" || up === "PENDING" || up === "REJECTED") return up;
+  return "PENDING";
+}
+
+
   function getFamilyAddress(f: any) {
     const parts: string[] = [];
     if (f.street) parts.push(String(f.street));
@@ -57,6 +64,16 @@ export default function AdminEntregasPage() {
   function isActive(f: any) {
     return f.is_active !== false;
   }
+  function onlyDigits(v: string) {
+  return (v || "").replace(/\D/g, "");
+}
+
+function maskCpf(cpf: string) {
+  const d = onlyDigits(cpf);
+  if (d.length !== 11) return cpf; // se vier vazio/curto, mostra como está
+  return `***.***.***-${d.slice(9, 11)}`;
+}
+
 
   async function loadAll() {
     setLoading(true);
@@ -122,8 +139,9 @@ export default function AdminEntregasPage() {
     return families.filter((f) => {
       const name = String(getFamilyName(f)).toLowerCase();
       const addr = String(getFamilyAddress(f) || "").toLowerCase();
-      const cpf = String(f.cpf || f.document || f.cpf_responsavel || "").toLowerCase();
-      return name.includes(s) || addr.includes(s) || cpf.includes(s);
+      const cpfDigits = onlyDigits(String(f.cpf || ""));
+      const sDigits = onlyDigits(s);
+      return name.includes(s) || addr.includes(s) || cpfDigits.includes(sDigits);
     });
   }, [q, families]);
 
@@ -322,7 +340,9 @@ export default function AdminEntregasPage() {
                       <tr key={f.id}>
                         <td className="ui-td" style={td}>
                           <div style={{ fontWeight: 700 }}>{getFamilyName(f)}</div>
-                          <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${f.cpf}` : ""}</div>
+                          <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${maskCpf(String(f.cpf))}` : ""}</div>
+
+
                         </td>
 
                         <td className="ui-td" style={td}>
@@ -330,13 +350,26 @@ export default function AdminEntregasPage() {
                         </td>
 
                         <td className="ui-td" style={td}>
-                          <div>
-                            <b>{String(f.status || "PENDING").toUpperCase()}</b>
-                            {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
-                          </div>
+  {(() => {
+    const st = normalizeStatus(f.status);
 
-                          {!gate.ok && <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{gate.reason}</div>}
-                        </td>
+    return (
+      <>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <StatusBadge status={st} />
+          {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+        </div>
+
+        {!gate.ok && (
+          <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
+            {gate.reason}
+          </div>
+        )}
+      </>
+    );
+  })()}
+</td>
+
 
                         <td className="ui-td" style={td}>
                           {already ? <span>Sim — {new Date(last!.delivered_at).toLocaleDateString()}</span> : "Não"}
@@ -390,16 +423,24 @@ export default function AdminEntregasPage() {
                   <Card key={f.id}>
                     <div style={{ fontWeight: 900, fontSize: 16 }}>{getFamilyName(f)}</div>
 
-                    {f.cpf && <div style={{ marginTop: 4, opacity: 0.85 }}>CPF: {String(f.cpf)}</div>}
+                    {f.cpf && (
+  <div style={{ marginTop: 4, opacity: 0.85 }}>
+    CPF: {maskCpf(String(f.cpf))}
+  </div>
+)}
+
 
                     <div style={{ marginTop: 8, opacity: 0.9 }}>
                       {getFamilyAddress(f) ? String(getFamilyAddress(f)) : "(sem endereço)"}
                     </div>
 
                     <div style={{ marginTop: 10 }}>
-                      <b>Status:</b> {String(f.status || "PENDING").toUpperCase()}
-                      {!isActive(f) && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
-                    </div>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+    <StatusBadge status={normalizeStatus(f.status)} />
+    {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+  </div>
+</div>
+
 
                     <div style={{ marginTop: 6 }}>
                       <b>Este mês:</b> {already ? `Sim (${new Date(last!.delivered_at).toLocaleDateString()})` : "Não"}

@@ -47,7 +47,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const links = useMemo(
     () => [
       { href: "/admin/familias", label: "Famílias" },
-      { href: "/admin/equipe", label: "Equipe" },
       { href: "/admin/entregas", label: "Entregas" },
       { href: "/admin/estoque", label: "Estoque" },
     ],
