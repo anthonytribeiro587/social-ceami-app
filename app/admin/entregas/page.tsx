@@ -2,7 +2,20 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles, PageHeader, StatusBadge } from "../_ui";
+import {
+  Card,
+  H2,
+  Button,
+  Input,
+  Table,
+  th,
+  td,
+  DesktopOnly,
+  MobileOnly,
+  styles,
+  PageHeader,
+  StatusBadge,
+} from "../_ui";
 
 type DeliveryRow = {
   id: string;
@@ -24,6 +37,12 @@ export default function AdminEntregasPage() {
   const [q, setQ] = useState("");
   const [labelData, setLabelData] = useState<any | null>(null);
 
+  // ===== HISTÓRICO (modal) =====
+  const [histOpen, setHistOpen] = useState(false);
+  const [histLoading, setHistLoading] = useState(false);
+  const [histFamily, setHistFamily] = useState<any | null>(null);
+  const [histRows, setHistRows] = useState<DeliveryRow[]>([]);
+
   function getFamilyName(f: any) {
     return f.full_name || f.name || f.responsible_name || f.head_name || f.nome || f.responsavel || "Família";
   }
@@ -33,11 +52,10 @@ export default function AdminEntregasPage() {
   }
 
   function normalizeStatus(s: string | null | undefined) {
-  const up = String(s || "").trim().toUpperCase();
-  if (up === "APPROVED" || up === "PENDING" || up === "REJECTED") return up;
-  return "PENDING";
-}
-
+    const up = String(s || "").trim().toUpperCase();
+    if (up === "APPROVED" || up === "PENDING" || up === "REJECTED") return up;
+    return "PENDING";
+  }
 
   function getFamilyAddress(f: any) {
     const parts: string[] = [];
@@ -64,16 +82,16 @@ export default function AdminEntregasPage() {
   function isActive(f: any) {
     return f.is_active !== false;
   }
+
   function onlyDigits(v: string) {
-  return (v || "").replace(/\D/g, "");
-}
+    return (v || "").replace(/\D/g, "");
+  }
 
-function maskCpf(cpf: string) {
-  const d = onlyDigits(cpf);
-  if (d.length !== 11) return cpf; // se vier vazio/curto, mostra como está
-  return `***.***.***-${d.slice(9, 11)}`;
-}
-
+  function maskCpf(cpf: string) {
+    const d = onlyDigits(cpf);
+    if (d.length !== 11) return cpf;
+    return `***.***.***-${d.slice(9, 11)}`;
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -217,13 +235,156 @@ function maskCpf(cpf: string) {
     window.print();
   }
 
-  return (
-    <main style={styles.page}>
-      <PageHeader
-  title="Admin • Entregas"
-  subtitle={<>Regra: 1 entrega por família por mês (entregas estornadas não contam).</>}
-/>
+  // ===== abre histórico sob demanda =====
+  async function openHistory(f: any) {
+    setMsg(null);
+    setHistOpen(true);
+    setHistFamily(f);
+    setHistRows([]);
+    setHistLoading(true);
 
+    const { data, error } = await supabase
+      .from("basket_deliveries")
+      .select("id,family_id,delivered_at,note,reversed_at,reversed_note")
+      .eq("family_id", f.id)
+      .order("delivered_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      setHistLoading(false);
+      setMsg(error.message);
+      return;
+    }
+
+    setHistRows((data as DeliveryRow[]) || []);
+    setHistLoading(false);
+  }
+
+  function closeHistory() {
+    setHistOpen(false);
+    setHistFamily(null);
+    setHistRows([]);
+    setHistLoading(false);
+  }
+
+  function Modal({
+    title,
+    subtitle,
+    onClose,
+    children,
+  }: {
+    title: React.ReactNode;
+    subtitle?: React.ReactNode;
+    onClose: () => void;
+    children: React.ReactNode;
+  }) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          zIndex: 9999,
+          display: "flex",
+          justifyContent: "center",
+          padding: 16,
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: "100%",
+            maxWidth: 820,
+            maxHeight: "85vh",
+            overflow: "auto",
+            borderRadius: 16,
+            background: "rgba(255,255,255,0.98)",
+            color: "#111",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+          }}
+        >
+          {/* HEADER FIXO */}
+          <div
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+              padding: 14,
+              background: "rgba(255,255,255,0.98)",
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 900,
+                  fontSize: 16,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {title}
+              </div>
+              {subtitle && (
+                <div
+                  style={{
+                    marginTop: 2,
+                    opacity: 0.75,
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {subtitle}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={onClose}
+              className="ui-btn"
+              style={{
+                padding: "8px 12px",
+                borderRadius: 999,
+                border: "1px solid rgba(0,0,0,0.15)",
+                background: "white",
+                fontWeight: 700,
+                cursor: "pointer",
+                flex: "0 0 auto",
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div style={{ padding: 14 }}>{children}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <main
+      style={{
+        ...styles.page,
+        maxWidth: 1400, // ✅ aumenta a área geral (desktop)
+        paddingBottom: 120, // ✅ evita a barra do mobile cobrir conteúdo
+      }}
+    >
+      <PageHeader
+        title="Admin • Entregas"
+        subtitle={<>1 entrega por família por mês (estornos não contam)</>}
+      />
 
       {msg && (
         <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
@@ -235,12 +396,17 @@ function maskCpf(cpf: string) {
         <H2>Resumo</H2>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div className="ui-pill" style={styles.pill}>
-            <b>Cestas prontas:</b> {readyQty}
+          {/* ✅ sempre em uma linha */}
+          <div className="ui-pill" style={{ ...styles.pill, whiteSpace: "nowrap" }}>
+            <b>Cestas prontas:</b>&nbsp;{readyQty}
           </div>
 
           <div style={{ flex: 1, minWidth: 260 }}>
-            <Input placeholder="Buscar família (nome, endereço, cpf)..." value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input
+              placeholder="Buscar família ou CPF..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
           </div>
 
           <Button onClick={loadAll}>Atualizar</Button>
@@ -271,7 +437,8 @@ function maskCpf(cpf: string) {
             )}
 
             <div style={{ marginTop: 8 }}>
-              <b>Data:</b> {new Date(labelData.delivery.delivered_at_out || labelData.createdAt).toLocaleString()}
+              <b>Data:</b>{" "}
+              {new Date(labelData.delivery.delivered_at_out || labelData.createdAt).toLocaleString()}
             </div>
 
             <div style={{ marginTop: 8, fontWeight: 700 }}>ENTREGA AUTORIZADA</div>
@@ -310,6 +477,69 @@ function maskCpf(cpf: string) {
         </Card>
       )}
 
+      {/* ===== MODAL HISTÓRICO (bonito e legível) ===== */}
+      {histOpen && (
+        <Modal
+          title="Histórico de entregas"
+          subtitle={
+            <>
+              <b>{histFamily ? getFamilyName(histFamily) : "Família"}</b>
+              {histFamily?.cpf ? <span> • CPF: {maskCpf(String(histFamily.cpf))}</span> : null}
+            </>
+          }
+          onClose={closeHistory}
+        >
+          {histLoading ? (
+            <div style={{ opacity: 0.8 }}>Carregando histórico...</div>
+          ) : histRows.length === 0 ? (
+            <div style={{ opacity: 0.8 }}>Sem entregas registradas para esta família.</div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {histRows.map((d) => {
+                const dt = new Date(d.delivered_at);
+                const isReversed = !!d.reversed_at;
+
+                return (
+                  <div
+                    key={d.id}
+                    style={{
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      borderRadius: 12,
+                      padding: 12,
+                      background: "rgba(245,245,245,0.85)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ fontWeight: 800 }}>
+                        {dt.toLocaleDateString()} •{" "}
+                        {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+
+                      {/* ✅ texto como tu pediu */}
+                      <div style={{ fontWeight: 900 }}>
+                        {isReversed ? "ESTORNADA" : "ENTREGUE"}
+                      </div>
+                    </div>
+
+                    {d.note && (
+                      <div style={{ marginTop: 6, opacity: 0.9 }}>
+                        <b>Obs:</b> {d.note}
+                      </div>
+                    )}
+
+                    {isReversed && (
+                      <div style={{ marginTop: 6, opacity: 0.9 }}>
+                        <b>Motivo:</b> {d.reversed_note || "(sem motivo)"}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Modal>
+      )}
+
       {loading ? (
         <p>Carregando...</p>
       ) : (
@@ -319,13 +549,13 @@ function maskCpf(cpf: string) {
             <Card>
               <H2>Famílias</H2>
 
-              <Table minWidth={920}>
+              <Table minWidth={1100}>
                 <thead>
                   <tr className="ui-trHead">
                     <th style={th}>Família</th>
                     <th style={th}>Endereço</th>
                     <th style={th}>Status</th>
-                    <th style={th}>Recebeu este mês?</th>
+                    <th style={th}>Este mês</th>
                     <th style={th}>Ações</th>
                   </tr>
                 </thead>
@@ -335,53 +565,55 @@ function maskCpf(cpf: string) {
                     const already = deliveriesThisMonth.has(f.id);
                     const last = deliveriesThisMonth.get(f.id);
                     const gate = canDeliver(f);
+                    const st = normalizeStatus(f.status);
 
                     return (
                       <tr key={f.id}>
                         <td className="ui-td" style={td}>
-                          <div style={{ fontWeight: 700 }}>{getFamilyName(f)}</div>
-                          <div style={{ opacity: 0.75, fontSize: 12 }}>{f.cpf ? `CPF: ${maskCpf(String(f.cpf))}` : ""}</div>
-
-
+                          <div style={{ fontWeight: 800 }}>{getFamilyName(f)}</div>
+                          <div style={{ opacity: 0.75, fontSize: 12 }}>
+                            {f.cpf ? `CPF: ${maskCpf(String(f.cpf))}` : ""}
+                          </div>
                         </td>
 
                         <td className="ui-td" style={td}>
-                          {getFamilyAddress(f) ? String(getFamilyAddress(f)) : <span style={{ opacity: 0.6 }}>(sem endereço)</span>}
+                          {getFamilyAddress(f) ? String(getFamilyAddress(f)) : (
+                            <span style={{ opacity: 0.6 }}>(sem endereço)</span>
+                          )}
                         </td>
 
                         <td className="ui-td" style={td}>
-  {(() => {
-    const st = normalizeStatus(f.status);
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                            <StatusBadge status={st} />
+                            {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+                          </div>
 
-    return (
-      <>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <StatusBadge status={st} />
-          {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
-        </div>
-
-        {!gate.ok && (
-          <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
-            {gate.reason}
-          </div>
-        )}
-      </>
-    );
-  })()}
-</td>
-
-
-                        <td className="ui-td" style={td}>
-                          {already ? <span>Sim — {new Date(last!.delivered_at).toLocaleDateString()}</span> : "Não"}
+                          {!gate.ok && (
+                            <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
+                              {gate.reason}
+                            </div>
+                          )}
                         </td>
 
                         <td className="ui-td" style={td}>
-                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          {already ? (
+                            <span>
+                              Sim — {new Date(last!.delivered_at).toLocaleDateString()}
+                            </span>
+                          ) : (
+                            "Não"
+                          )}
+                        </td>
+
+                        {/* ✅ AÇÕES EM LINHA, MESMO PADRÃO */}
+                        <td className="ui-td" style={td}>
+                          <div style={actionsRow}>
                             <Button
                               variant="primary"
                               onClick={() => deliverToFamily(f)}
                               disabled={!gate.ok}
                               title={!gate.ok ? gate.reason : undefined}
+                              style={actionBtn}
                             >
                               Entregar 1 cesta
                             </Button>
@@ -390,8 +622,16 @@ function maskCpf(cpf: string) {
                               onClick={() => reverseForFamily(f.id)}
                               disabled={!already}
                               title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
+                              style={actionBtn}
                             >
                               Estornar
+                            </Button>
+
+                            <Button
+                              onClick={() => openHistory(f)}
+                              style={actionBtn}
+                            >
+                              Histórico
                             </Button>
                           </div>
                         </td>
@@ -424,29 +664,32 @@ function maskCpf(cpf: string) {
                     <div style={{ fontWeight: 900, fontSize: 16 }}>{getFamilyName(f)}</div>
 
                     {f.cpf && (
-  <div style={{ marginTop: 4, opacity: 0.85 }}>
-    CPF: {maskCpf(String(f.cpf))}
-  </div>
-)}
-
+                      <div style={{ marginTop: 4, opacity: 0.85 }}>
+                        CPF: {maskCpf(String(f.cpf))}
+                      </div>
+                    )}
 
                     <div style={{ marginTop: 8, opacity: 0.9 }}>
                       {getFamilyAddress(f) ? String(getFamilyAddress(f)) : "(sem endereço)"}
                     </div>
 
                     <div style={{ marginTop: 10 }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-    <StatusBadge status={normalizeStatus(f.status)} />
-    {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
-  </div>
-</div>
-
-
-                    <div style={{ marginTop: 6 }}>
-                      <b>Este mês:</b> {already ? `Sim (${new Date(last!.delivered_at).toLocaleDateString()})` : "Não"}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <StatusBadge status={normalizeStatus(f.status)} />
+                        {!isActive(f) && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+                      </div>
                     </div>
 
-                    {!gate.ok && <div style={{ marginTop: 8, opacity: 0.8, fontSize: 13 }}>{gate.reason}</div>}
+                    <div style={{ marginTop: 6 }}>
+                      <b>Este mês:</b>{" "}
+                      {already ? `Sim (${new Date(last!.delivered_at).toLocaleDateString()})` : "Não"}
+                    </div>
+
+                    {!gate.ok && (
+                      <div style={{ marginTop: 8, opacity: 0.8, fontSize: 13 }}>
+                        {gate.reason}
+                      </div>
+                    )}
 
                     <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
                       <Button
@@ -464,6 +707,10 @@ function maskCpf(cpf: string) {
                         title={!already ? "Não há entrega ativa este mês" : "Estorna e devolve 1 cesta"}
                       >
                         Estornar
+                      </Button>
+
+                      <Button onClick={() => openHistory(f)}>
+                        Histórico
                       </Button>
                     </div>
                   </Card>
@@ -488,4 +735,19 @@ const labelBox: React.CSSProperties = {
   borderRadius: 12,
   padding: 14,
   maxWidth: 420,
+};
+
+const actionsRow: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+  justifyContent: "flex-start", // ✅ alinhado à esquerda
+  flexWrap: "nowrap", // ✅ fica lado a lado
+};
+
+const actionBtn: React.CSSProperties = {
+  padding: "7px 12px",
+  borderRadius: 999,
+  fontSize: 12,
+  whiteSpace: "nowrap",
 };

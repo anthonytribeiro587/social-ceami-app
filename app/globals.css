@@ -136,3 +136,71 @@ html, body {
 @media (max-width: 720px) {
   .ui-grid2 { grid-template-columns: 1fr; }
 }
+
+
+:root {
+  --container-max: 1400px;
+  --page-pad-x: 20px;
+
+  /* altura aproximada do footer-nav + espaço de respiro */
+  --bottom-nav-h: 76px;
+}
+
+/* container global opcional (se você quiser usar classe ao invés do styles.page) */
+.ui-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 24px var(--page-pad-x);
+}
+
+/* ✅ bottom nav: bonita e “centralizada” */
+.ui-bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 9999;
+
+  width: min(560px, calc(100vw - 24px));
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border-radius: 18px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+/* botões da nav */
+.ui-bottom-nav a,
+.ui-bottom-nav button {
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  text-decoration: none;
+}
+
+/* estado ativo (se tu aplica alguma classe “active”) */
+.ui-bottom-nav .active {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.28);
+}
+
+/* ✅ garante que conteúdo não fique atrás da nav */
+.ui-page-with-bottomnav {
+  padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+}
