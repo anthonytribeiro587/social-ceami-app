@@ -132,3 +132,13 @@ html, body {
 
   html, body { overflow-x: hidden; }
 }
+/* ===== helpers de layout ===== */
+.ui-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .ui-grid2 { grid-template-columns: 1fr; }
+}

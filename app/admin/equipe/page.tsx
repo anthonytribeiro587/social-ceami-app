@@ -13,6 +13,7 @@ import {
   DesktopOnly,
   MobileOnly,
   styles,
+  PageHeader,
 } from "../_ui";
 
 type ProfileRow = {
@@ -89,10 +90,15 @@ export default function AdminEquipePage() {
 
   return (
     <main style={styles.page}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Equipe</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Aqui você define quem é <b>STAFF</b> (equipe) e pode ativar/desativar usuários.
-      </p>
+      <PageHeader
+  title="Admin • Equipe"
+  subtitle={
+    <>
+      Aqui você define quem é <b>STAFF</b> (equipe) e pode ativar/desativar usuários.
+    </>
+  }
+/>
+
 
       {msg && (
         <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
@@ -193,7 +199,7 @@ export default function AdminEquipePage() {
 
           {/* MOBILE: cards */}
           <MobileOnly>
-            <div style={{ display: "grid", gap: 12 }}>
+           <div className="ui-grid2">
               {filtered.map((p) => (
                 <Card key={p.id}>
                   <div style={{ fontWeight: 900, fontSize: 16 }}>{p.full_name || "(sem nome)"}</div>

@@ -281,8 +281,10 @@ export default function AdminFamiliasPage() {
             </Select>
           </div>
 
-          <Button onClick={() => setOpenForm((v) => !v)}>{openForm ? "Fechar" : "Cadastrar família"}</Button>
-          <Button onClick={loadFamilies}>Atualizar</Button>
+          <Button variant="primary" onClick={() => setOpenForm((v) => !v)}>{openForm ? "Fechar" : "Cadastrar família"}
+          </Button>
+            <Button onClick={loadFamilies}>Atualizar</Button>
+
         </div>
       </Card>
 

@@ -9,21 +9,23 @@ export const styles = {
 
   card: {
     border: "1px solid rgba(0,0,0,0.12)",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+
     background: "rgba(255,255,255,0.88)",
     color: "#111",
     boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
   } as React.CSSProperties,
 
-  h2: { fontSize: 18, marginTop: 0, color: "inherit" } as React.CSSProperties,
+ h2: { fontSize: 15, marginTop: 0, marginBottom: 10, color: "inherit", letterSpacing: -0.1 } as React.CSSProperties,
 
   input: {
     width: "100%",
     marginTop: 6,
-    padding: 10,
-    borderRadius: 10,
+    padding: "10px 12px",
+    borderRadius: 12,
+    fontSize: 14,
     border: "1px solid rgba(0,0,0,0.16)",
     background: "rgba(255,255,255,0.96)",
     color: "#111",
@@ -341,6 +343,40 @@ export function MobileOnly({ children }: { children: React.ReactNode }) {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+
+  export function PageHeader({
+  title,
+  subtitle,
+  right,
+}: {
+  title: string;
+  subtitle?: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 22, margin: 0, letterSpacing: -0.2 }}>{title}</h1>
+          {subtitle ? (
+            <p style={{ margin: "6px 0 0", opacity: 0.78, fontSize: 14, lineHeight: 1.4 }}>
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        {right ? <div>{right}</div> : null}
+      </div>
     </div>
   );
 }
