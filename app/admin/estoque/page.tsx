@@ -14,6 +14,7 @@ import {
   MobileOnly,
   DesktopOnly,
   styles,
+  PageHeader
 } from "../_ui";
 
 type Item = {
@@ -299,8 +300,11 @@ export default function AdminEstoquePage() {
 
   return (
     <main style={styles.page}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Estoque</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>Controle de itens, entradas/saídas e montagem de cestas.</p>
+      <PageHeader
+  title="Admin • Estoque"
+  subtitle={<>Controle de itens, entradas/saídas e montagem de cestas.</>}
+/>
+
 
       {msg && (
         <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
@@ -332,7 +336,8 @@ export default function AdminEstoquePage() {
             </div>
           </Card>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="ui-grid2">
+
             <Card>
               <H2>Cadastrar item</H2>
 

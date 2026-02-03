@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles } from "../_ui";
+import { Card, H2, Button, Input, Table, th, td, DesktopOnly, MobileOnly, styles, PageHeader } from "../_ui";
 
 type DeliveryRow = {
   id: string;
@@ -201,10 +201,11 @@ export default function AdminEntregasPage() {
 
   return (
     <main style={styles.page}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Admin • Entregas</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Regra: <b>1 entrega por família por mês</b> (entregas estornadas não contam).
-      </p>
+      <PageHeader
+  title="Admin • Entregas"
+  subtitle={<>Regra: 1 entrega por família por mês (entregas estornadas não contam).</>}
+/>
+
 
       {msg && (
         <div style={{ padding: 12, border: "1px solid rgba(255,80,80,0.6)", borderRadius: 12, marginBottom: 12 }}>
