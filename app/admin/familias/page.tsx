@@ -14,6 +14,7 @@ import {
   DesktopOnly,
   MobileOnly,
   styles,
+  StatusBadge
 } from "../_ui";
 
 type FamilyRow = {
@@ -400,81 +401,84 @@ export default function AdminFamiliasPage() {
 
                 <tbody>
                   {filtered.map((r) => {
-                    const st = normalizeStatus(r.status);
-                    const dup = r.address_key ? (addressDupCount.get(r.address_key) || 0) > 1 : false;
-                    const active = r.is_active !== false;
+  const st = normalizeStatus(r.status);
+  const dup = r.address_key ? (addressDupCount.get(r.address_key) || 0) > 1 : false;
+  const active = r.is_active !== false;
 
-                    return (
-                      <tr key={r.id}>
-                        <td className="ui-td" style={td}>
-                          {r.responsible_name}
-                        </td>
-                        <td className="ui-td" style={td}>
-                          {maskCpf(r.cpf)}
-                        </td>
-                        <td className="ui-td" style={td}>
-                          {r.phone}
-                        </td>
-                        <td className="ui-td" style={td}>
-                          {r.members_count}
-                        </td>
-                        <td className="ui-td" style={td}>
-                          {r.city}
-                        </td>
-                        <td className="ui-td" style={td}>
-                          {r.neighborhood}
-                        </td>
+  return (
+    <tr key={r.id}>
+      <td className="ui-td" style={td}>
+        {r.responsible_name}
+      </td>
+      <td className="ui-td" style={td}>
+        {maskCpf(r.cpf)}
+      </td>
+      <td className="ui-td" style={td}>
+        {r.phone}
+      </td>
+      <td className="ui-td" style={td}>
+        {r.members_count}
+      </td>
+      <td className="ui-td" style={td}>
+        {r.city}
+      </td>
+      <td className="ui-td" style={td}>
+        {r.neighborhood}
+      </td>
 
-                        <td className="ui-td" style={td}>
-                          {st}
-                          {!active && <span style={{ marginLeft: 8, opacity: 0.75 }}>(INATIVA)</span>}
-                        </td>
+      <td className="ui-td" style={td}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <StatusBadge status={st} />
+          {!active && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+        </div>
+      </td>
 
-                        <td className="ui-td" style={td}>
-                          {dup ? <span title="Outro cadastro com o mesmo endereço">⚠ endereço</span> : "-"}
-                        </td>
+      <td className="ui-td" style={td}>
+        {dup ? <span title="Outro cadastro com o mesmo endereço">⚠ endereço</span> : "-"}
+      </td>
 
-                        <td className="ui-td" style={td}>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <Button
-                              onClick={() => setFamilyStatus(r.id, "APPROVED")}
-                              disabled={st === "APPROVED"}
-                              title="Aprovar"
-                              style={miniBtnStyle}
-                            >
-                              Aprovar
-                            </Button>
+      <td className="ui-td" style={td}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button
+            onClick={() => setFamilyStatus(r.id, "APPROVED")}
+            disabled={st === "APPROVED"}
+            title="Aprovar"
+            style={miniBtnStyle}
+          >
+            Aprovar
+          </Button>
 
-                            <Button
-                              onClick={() => setFamilyStatus(r.id, "REJECTED")}
-                              disabled={st === "REJECTED"}
-                              title="Rejeitar"
-                              style={miniBtnStyle}
-                            >
-                              Rejeitar
-                            </Button>
+          <Button
+            onClick={() => setFamilyStatus(r.id, "REJECTED")}
+            disabled={st === "REJECTED"}
+            title="Rejeitar"
+            style={miniBtnStyle}
+          >
+            Rejeitar
+          </Button>
 
-                            <Button
-                              onClick={() => setFamilyStatus(r.id, "PENDING")}
-                              disabled={st === "PENDING"}
-                              title="Voltar para pendente"
-                              style={miniBtnStyle}
-                            >
-                              Pendente
-                            </Button>
+          <Button
+            onClick={() => setFamilyStatus(r.id, "PENDING")}
+            disabled={st === "PENDING"}
+            title="Voltar para pendente"
+            style={miniBtnStyle}
+          >
+            Pendente
+          </Button>
 
-                            <Button
-                              onClick={() => toggleActive(r.id, !active)}
-                              title={active ? "Desativar" : "Ativar"}
-                              style={miniBtnStyle}
-                            >
-                              {active ? "Desativar" : "Ativar"}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+          <Button
+            onClick={() => toggleActive(r.id, !active)}
+            title={active ? "Desativar" : "Ativar"}
+            style={miniBtnStyle}
+          >
+            {active ? "Desativar" : "Ativar"}
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+})}
+
 
                   {filtered.length === 0 && (
                     <tr>
@@ -516,9 +520,11 @@ export default function AdminFamiliasPage() {
                       <b>Cidade/Bairro:</b> {r.city} — {r.neighborhood}
                     </div>
 
-                    <div style={{ marginTop: 10 }}>
-                      <b>Status:</b> {st} {!active && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
-                    </div>
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+  <b>Status:</b> <StatusBadge status={st} />
+  {!active && <span style={{ opacity: 0.75 }}>(INATIVA)</span>}
+</div>
+
 
                     <div style={{ marginTop: 6, opacity: 0.9 }}>
                       <b>Flags:</b> {dup ? "⚠ endereço duplicado" : "—"}
