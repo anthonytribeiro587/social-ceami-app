@@ -81,20 +81,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             style={logo}
           />
 
-          <nav style={navLinks}>
-            {links.map((l) => {
-              const active = pathname?.startsWith(l.href);
-              return (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  style={active ? navLinkActive : navLink}
-                >
-                  {l.label}
-                </a>
-              );
-            })}
-          </nav>
+          {/* Top nav (desktop) */}
+    <nav className="adminTopNav" style={navLinksDesktop}>
+      {links.map((l) => {
+        const active = pathname?.startsWith(l.href);
+        return (
+        <a key={l.href} href={l.href} style={active ? navLinkActive : navLink}>
+        {l.label}
+        </a>
+      );
+        })}
+    </nav>
+
         </div>
 
         <button
@@ -107,9 +105,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           Sair
         </button>
       </header>
+{/* Bottom nav (mobile) */}
+<nav className="adminBottomNav">
+  {links.map((l) => {
+    const active = pathname?.startsWith(l.href);
+    return (
+      <a
+        key={l.href}
+        href={l.href}
+        className={`adminBottomItem ${active ? "active" : ""}`}
+      >
+        {l.label}
+      </a>
+    );
+  })}
+</nav>
+
 
       {/* CONTEÚDO */}
       <main style={content}>{children}</main>
+
     </div>
   );
 }
@@ -127,29 +142,34 @@ const navbar: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "0 16px",
+  padding: "0 12px",
   borderBottom: "1px solid rgba(255,255,255,0.08)",
 };
+
 
 const navLeft: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 16,
-  overflow: "hidden",
+  gap: 12,
+  minWidth: 0,
 };
+
 
 const logo: React.CSSProperties = {
   height: 28,
 };
 
-const navLinks: React.CSSProperties = {
+const navLinksDesktop: React.CSSProperties = {
   display: "flex",
   gap: 8,
-  overflowX: "auto",
+  flexWrap: "nowrap",
+  overflow: "hidden",
 };
 
+
+
 const navLink: React.CSSProperties = {
-  padding: "6px 12px",
+  padding: "6px 10px",
   borderRadius: 999,
   border: "1px solid rgba(255,255,255,0.15)",
   textDecoration: "none",
@@ -157,6 +177,7 @@ const navLink: React.CSSProperties = {
   fontSize: 13,
   whiteSpace: "nowrap",
 };
+
 
 const navLinkActive: React.CSSProperties = {
   ...navLink,
@@ -189,4 +210,6 @@ const content: React.CSSProperties = {
   padding: 16,
   maxWidth: 1200,
   margin: "0 auto",
+  paddingBottom: 16,
 };
+

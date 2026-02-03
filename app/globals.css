@@ -47,3 +47,88 @@ html, body {
 * { box-sizing: border-box; }
 
 a { color: inherit; }
+
+/* ===== Admin nav responsiva (sem scroll lateral) ===== */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Desktop: aparece o top nav */
+.adminTopNav { display: flex; }
+
+/* Mobile: aparece o bottom nav */
+.adminBottomNav { display: none; }
+
+@media (max-width: 768px) {
+  /* some top nav no mobile */
+  .adminTopNav { display: none !important; }
+
+  /* bottom nav no mobile */
+  .adminBottomNav {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 50;
+
+    padding: 10px;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+
+  /* espaço pro conteúdo */
+  main { padding-bottom: 110px !important; }
+}
+/* ===== Admin bottom nav ===== */
+.adminBottomNav { display: none; }
+
+@media (max-width: 768px) {
+  .adminBottomNav {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 999;
+
+    padding: 10px;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+
+  .adminBottomItem {
+    text-align: center;
+    padding: 10px 8px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: rgba(255,255,255,0.90);
+    font-size: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    white-space: nowrap;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.4) inset;
+    transform: translateY(-1px);
+  }
+
+  .adminBottomItem.active {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.35);
+    font-weight: 700;
+  }
+
+  /* espaço pro conteúdo não ficar embaixo da nav */
+  main { padding-bottom: 120px !important; }
+
+  html, body { overflow-x: hidden; }
+}
