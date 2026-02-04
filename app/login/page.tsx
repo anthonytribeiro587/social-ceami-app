@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // 👉 popup sempre abre ao entrar na tela
+  const [showInfo, setShowInfo] = useState(true);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
@@ -25,34 +28,67 @@ export default function LoginPage() {
 
     if (error) return setMsg(error.message);
 
-    // se seu middleware já redireciona, pode remover esse push
     window.location.href = "/admin";
   }
 
   return (
     <main style={pageBg}>
+      {/* ===== POPUP OBJETIVO DO SISTEMA ===== */}
+      {showInfo && (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <button
+              aria-label="Fechar"
+              onClick={() => setShowInfo(false)}
+              style={modalClose}
+            >
+              ×
+            </button>
+
+            <h3 style={modalTitle}>Objetivo do sistema</h3>
+
+            <div style={modalBody}>
+              <p style={modalP}>
+                Este sistema foi desenvolvido para auxiliar o controle do
+                projeto social da igreja, permitindo o cadastro de famílias,
+                o gerenciamento de entregas de cestas básicas e o controle de
+                estoque.
+              </p>
+
+              <p style={modalP}>
+                O acesso é restrito à equipe autorizada. Utilize o sistema com
+                responsabilidade, garantindo a veracidade das informações
+                registradas.
+              </p>
+            </div>
+
+            <div style={modalFooter}>
+              <Button variant="primary" onClick={() => setShowInfo(false)}>
+                Entendi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== LOGIN ===== */}
       <div style={wrap}>
         <Card style={card}>
           <div style={brandTop}>
-  <img
-    src="/logo-ceami.png"
-    alt="CEAMI"
-    style={logoTop}
-    draggable={false}
-  />
+            <img
+              src="/logo-ceami.png"
+              alt="CEAMI"
+              style={logoTop}
+              draggable={false}
+            />
 
-  <div style={title}>Acesso administrativo</div>
-  <div style={subtitle}>
-    Entre para gerenciar famílias, entregas e estoque.
-  </div>
-</div>
-
-
-          {msg && (
-            <div style={alert}>
-              {msg}
+            <div style={title}>Acesso administrativo</div>
+            <div style={subtitle}>
+              Entre para gerenciar famílias, entregas e estoque.
             </div>
-          )}
+          </div>
+
+          {msg && <div style={alert}>{msg}</div>}
 
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
             <label style={label}>
@@ -87,12 +123,14 @@ export default function LoginPage() {
         </Card>
 
         <div style={footer}>
-          <span style={{ opacity: 0.9 }}>CEAMI • Projeto Social</span>
+          <span>CEAMI • Projeto Social</span>
         </div>
       </div>
     </main>
   );
 }
+
+/* ================== ESTILOS ================== */
 
 const pageBg: React.CSSProperties = {
   minHeight: "100vh",
@@ -119,55 +157,49 @@ const card: React.CSSProperties = {
   background: "rgba(255,255,255,0.92)",
 };
 
-const brandRow: React.CSSProperties = {
-  display: "flex",
-  gap: 12,
-  alignItems: "center",
-  marginBottom: 12,
+const brandTop: React.CSSProperties = {
+  display: "grid",
+  justifyItems: "center",
+  gap: 8,
+  marginBottom: 14,
 };
 
-const logo: React.CSSProperties = {
-  width: 54,
-  height: 54,
+const logoTop: React.CSSProperties = {
+  width: 250,
+  height: 150,
   objectFit: "contain",
-  borderRadius: 12,
-  background: "rgba(0,0,0,0.04)",
-  padding: 8,
+  filter: "brightness(0) saturate(100%)",
 };
 
 const title: React.CSSProperties = {
   fontSize: 18,
-  fontWeight: 700,
-  lineHeight: 1.1,
+  fontWeight: 800,
   color: "#0b1220",
-  opacity: 0.85
 };
 
 const subtitle: React.CSSProperties = {
-  marginTop: 4,
   fontSize: 13,
-  opacity: 0.75,
+  opacity: 0.7,
   color: "#0b1220",
+  textAlign: "center",
 };
 
 const label: React.CSSProperties = {
   display: "grid",
   gap: 6,
   fontSize: 13,
-  fontWeight: 800,
+  fontWeight: 700,
   color: "#0b1220",
 };
 
 const btnFull: React.CSSProperties = {
   width: "100%",
-  justifyContent: "center",
 };
 
 const alert: React.CSSProperties = {
   padding: 12,
   border: "1px solid rgba(255,80,80,0.5)",
   borderRadius: 12,
-  marginBottom: 12,
   background: "rgba(255,80,80,0.08)",
   color: "#0b1220",
   fontWeight: 700,
@@ -185,17 +217,61 @@ const footer: React.CSSProperties = {
   fontSize: 12,
   color: "rgba(255,255,255,0.7)",
 };
-const brandTop: React.CSSProperties = {
+
+/* ===== MODAL ===== */
+
+const modalOverlay: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.55)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+  zIndex: 9999,
+};
+
+const modalBox: React.CSSProperties = {
+  position: "relative",
+  width: "100%",
+  maxWidth: 520,
+  background: "white",
+  borderRadius: 18,
+  padding: "20px 18px 18px",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+};
+
+const modalClose: React.CSSProperties = {
+  position: "absolute",
+  top: 10,
+  right: 12,
+  border: "none",
+  background: "transparent",
+  fontSize: 26,
+  cursor: "pointer",
+  lineHeight: 1,
+};
+
+const modalTitle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  marginBottom: 10,
+  color: "#0b1220",
+};
+
+const modalBody: React.CSSProperties = {
   display: "grid",
-  justifyItems: "center",
-  gap: 8,
-  marginBottom: 14,
+  gap: 10,
 };
 
-const logoTop: React.CSSProperties = {
-  width: 250,
-  height: 150,
-  objectFit: "contain",
-  filter: "brightness(0) saturate(100%)"
+const modalP: React.CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.5,
+  color: "#0b1220",
 };
 
+const modalFooter: React.CSSProperties = {
+  marginTop: 16,
+  display: "flex",
+  justifyContent: "flex-end",
+};
