@@ -50,13 +50,16 @@ Sistema web para gestão social desenvolvido para o CEAMI, com foco no controle 
 
 git clone https://github.com/seu-usuario/social-ceami-app.git
 cd social-ceami-app
+
 2️⃣ Instalar dependências
 npm install
+
 3️⃣ Variáveis de ambiente
 Crie um arquivo .env.local:
 
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
 4️⃣ Rodar o projeto
 npm run dev
 Acesse:
